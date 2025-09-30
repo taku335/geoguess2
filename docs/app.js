@@ -1,6 +1,6 @@
 // ========= 設定 =========
 const ROUNDS_PER_GAME = 3; // 1ゲームで抽選するラウンド数
-const TARGET_POOL_SIZE = 10; // 候補数：10
+const TARGET_POOL_SIZE = 20; // 候補数：20
 const COMMONS_CATEGORY = 'Category:360° panoramas with equirectangular projection'; // 取得元
 const COMMONS_API = 'https://commons.wikimedia.org/w/api.php';
 
@@ -46,7 +46,7 @@ let ROUNDS = ROUNDS_PER_GAME;
 let round = 0;
 let score = 0;
 
-let POOL = []; // 候補10件
+let POOL = []; // 候補20件
 let order = []; // 今回プレイで使う順
 let current = null; // 現在のロケーション
 let hasGuessed = false;
@@ -144,7 +144,7 @@ function setButtons({ startDisabled, guessDisabled, nextDisabled }) {
   document.getElementById('nextBtn').disabled = nextDisabled ?? true;
 }
 
-// ========= Wikimedia Commons から候補10件を作る =========
+// ========= Wikimedia Commons から候補20件を作る =========
 async function loadCommonsPanoramas(targetCount = TARGET_POOL_SIZE, onProgress = () => {}) {
   const selected = [];
   let gcmcontinue = null;
@@ -250,7 +250,7 @@ async function startGame() {
   document.getElementById('roundLabel').textContent = `0 / ${ROUNDS_PER_GAME}`;
 
   setButtons({ startDisabled: true, guessDisabled: true, nextDisabled: true });
-  await ensurePool(); // 候補10件を準備（フォールバックあり）
+  await ensurePool(); // 候補20件を準備（フォールバックあり）
 
   // 今回の出題順を作成（候補からランダム抽出）
   order = shuffle([...POOL]).slice(0, ROUNDS_PER_GAME);
