@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Mini GeoGuessr-like — 100候補版</title>
+  <title>Mini GeoGuessr-like — 10候補版</title>
 
   <!-- Pannellum (360°パノラマ) -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css">
@@ -126,13 +126,13 @@
   <header>
     <div class="brand">🌍 Mini GeoGuessr-like</div>
     <div class="score">
-      <div>ラウンド: <b id="roundLabel">0 / 5</b></div>
+      <div>ラウンド: <b id="roundLabel">0 / 3</b></div>
       <div>スコア: <b id="scoreLabel">0</b></div>
-      <div>候補: <b id="poolLabel">0 / 100</b></div>
+      <div>候補: <b id="poolLabel">0 / 10</b></div>
     </div>
     <div class="prefs">
       ラウンド数:
-      <input id="roundsInput" type="number" min="1" max="20" value="5" />
+      <input id="roundsInput" type="number" min="1" max="10" value="3" disabled />
       <button id="startBtn" class="btn">ゲーム開始</button>
     </div>
   </header>
@@ -183,8 +183,8 @@
 
   <script>
     // ========= 設定 =========
-    const DEFAULT_ROUNDS = 5;          // 初期ラウンド数（UIで変更可）
-    const TARGET_POOL_SIZE = 100;      // 候補数：100
+    const ROUNDS_PER_GAME = 3;         // 1ゲームで抽選するラウンド数
+    const TARGET_POOL_SIZE = 10;       // 候補数：10
     const COMMONS_CATEGORY = 'Category:360° panoramas with equirectangular projection'; // 取得元
     const COMMONS_API = 'https://commons.wikimedia.org/w/api.php';
 
@@ -208,11 +208,11 @@
     let answerMarker = null;
     let line = null;
 
-    let ROUNDS = DEFAULT_ROUNDS;
+    let ROUNDS = ROUNDS_PER_GAME;
     let round = 0;
     let score = 0;
 
-    let POOL = [];        // 候補100件
+    let POOL = [];        // 候補10件
     let order = [];       // 今回プレイで使う順
     let current = null;   // 現在のロケーション
     let hasGuessed = false;
@@ -223,9 +223,11 @@
     initUI();
 
     function initUI() {
-      document.getElementById('roundsInput').value = DEFAULT_ROUNDS;
+      const roundsInput = document.getElementById('roundsInput');
+      roundsInput.value = ROUNDS_PER_GAME;
+      roundsInput.disabled = true;
       document.getElementById('poolLabel').textContent = `0 / ${TARGET_POOL_SIZE}`;
-      document.getElementById('roundLabel').textContent = `0 / ${DEFAULT_ROUNDS}`;
+      document.getElementById('roundLabel').textContent = `0 / ${ROUNDS_PER_GAME}`;
       document.getElementById('scoreLabel').textContent = `0`;
     }
 
@@ -300,8 +302,8 @@
       document.getElementById('nextBtn').disabled  = nextDisabled  ?? true;
     }
 
-    // ========= Wikimedia Commons から候補100件を作る =========
-    async function loadCommonsPanoramas(targetCount = 100, onProgress = () => {}) {
+    // ========= Wikimedia Commons から候補10件を作る =========
+    async function loadCommonsPanoramas(targetCount = TARGET_POOL_SIZE, onProgress = () => {}) {
       const selected = [];
       let gcmcontinue = null;
       let fetchedPages = 0;
@@ -386,7 +388,7 @@
           text.textContent = `抽出 ${ok} / ${target}　(取得ページ:${fetched})`;
         });
 
-        if (results.length < 10) throw new Error('候補が足りません');
+        if (results.length < TARGET_POOL_SIZE) throw new Error('候補が足りません');
         POOL = shuffle(results);
         updateHud();
       } catch (e) {
@@ -394,7 +396,7 @@
         // フォールバック（3件）
         POOL = [...FALLBACK_LOCATIONS];
         updateHud();
-        alert('Wikimediaからの取得に失敗したため、サンプル3件で開始します。');
+        alert('Wikimediaからの取得に失敗したため、サンプル候補で開始します。');
       } finally {
         overlay.style.display = 'none';
       }
@@ -402,15 +404,16 @@
 
     // ========= ラウンド管理 =========
     async function startGame() {
-      ROUNDS = Math.max(1, Math.min(20, parseInt(document.getElementById('roundsInput').value || DEFAULT_ROUNDS, 10)));
-      document.getElementById('roundLabel').textContent = `0 / ${ROUNDS}`;
+      document.getElementById('roundLabel').textContent = `0 / ${ROUNDS_PER_GAME}`;
 
       setButtons({ startDisabled: true, guessDisabled: true, nextDisabled: true });
-      await ensurePool(); // 候補100件を準備（フォールバックあり）
+      await ensurePool(); // 候補10件を準備（フォールバックあり）
 
       // 今回の出題順を作成（候補からランダム抽出）
-      order = shuffle([...POOL]).slice(0, ROUNDS);
+      order = shuffle([...POOL]).slice(0, ROUNDS_PER_GAME);
+      ROUNDS = order.length;
       round = 0; score = 0;
+      document.getElementById('roundLabel').textContent = `0 / ${ROUNDS}`;
       nextRound();
     }
 
@@ -478,6 +481,7 @@
 
     function resetGame() {
       round = 0; score = 0; current = null;
+      ROUNDS = ROUNDS_PER_GAME;
       order = [];
       updateHud();
       if (viewer) { viewer.destroy(); viewer = null; }
@@ -487,6 +491,7 @@
       map.setView([20, 0], 2);
       setButtons({ startDisabled: false, guessDisabled: true, nextDisabled: true });
       document.getElementById('resultOverlay').style.display = 'none';
+      document.getElementById('roundLabel').textContent = `0 / ${ROUNDS_PER_GAME}`;
     }
 
     // ========= イベント =========
