@@ -1,0 +1,506 @@
+﻿<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Mini GeoGuessr-like — 100候補版</title>
+
+  <!-- Pannellum (360°パノラマ) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.css">
+  <script src="https://cdn.jsdelivr.net/npm/pannellum@2.5.6/build/pannellum.js"></script>
+
+  <!-- Leaflet (推測用マップ) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+        integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+          integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #151b2d;
+      --sub: #8590a3;
+      --accent: #4f8cff;
+      --good: #2dcc70;
+      --bad: #ff6b6b;
+    }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans JP", "Hiragino Kaku Gothic ProN", Meiryo, sans-serif;
+      background: radial-gradient(1200px 800px at 10% -10%, #17203a 0%, var(--bg) 45%, #05070e 100%);
+      color: #eaf0ff;
+    }
+
+    header {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 12px;
+      align-items: center;
+      padding: 14px clamp(12px, 3vw, 28px);
+      backdrop-filter: blur(6px);
+      background: linear-gradient(180deg, rgba(10,12,22,.65), rgba(10,12,22,.35));
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      position: sticky; top: 0; z-index: 10;
+    }
+    .brand { font-weight: 800; letter-spacing: .4px; }
+    .score {
+      display: flex; gap: 16px; align-items: baseline; color: var(--sub);
+      font-size: 14px;
+    }
+    .score b { color: #fff; font-size: 18px; }
+    .prefs { display: flex; gap: 10px; align-items: center; color: var(--sub); font-size: 13px; }
+    .prefs input[type="number"] {
+      width: 64px; padding: 6px 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,.12);
+      background: #0f1530; color: #fff;
+    }
+
+    .btn {
+      appearance: none; border: 0; padding: 10px 14px; border-radius: 10px;
+      background: var(--accent); color: #fff; font-weight: 700; cursor: pointer;
+      box-shadow: 0 6px 20px rgba(79,140,255,.35), inset 0 0 0 1px rgba(255,255,255,.12);
+      transition: transform .06s ease, filter .2s ease, background .2s ease;
+    }
+    .btn:hover { filter: brightness(1.05); }
+    .btn:active { transform: translateY(1px); }
+    .btn[disabled] { opacity: .6; cursor: not-allowed; }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr minmax(320px, 520px);
+      gap: 10px;
+      padding: 10px;
+      height: calc(100vh - 64px);
+    }
+    #pano, #map { width: 100%; height: 100%; border-radius: 14px; overflow: hidden; }
+    #pano { background: #000; }
+    #map  { outline: 1px solid rgba(255,255,255,.06); }
+
+    .panel {
+      position: absolute; left: 50%; transform: translateX(-50%);
+      bottom: 16px; background: rgba(9,12,21,.75);
+      border: 1px solid rgba(255,255,255,.08);
+      padding: 8px 12px; border-radius: 10px; backdrop-filter: blur(6px);
+      font-size: 13px; color: var(--sub);
+    }
+
+    .controls {
+      position: absolute; right: 18px; top: 86px; display: grid; gap: 8px; z-index: 6;
+    }
+    .controls .btn.secondary { background: #2c375a; }
+    .controls .btn.success   { background: var(--good); }
+    .controls .btn.warn      { background: #ff8a4a; }
+
+    .overlay {
+      position: absolute; inset: 0; display: none; place-items: center;
+      background: rgba(2,5,12,.55); backdrop-filter: blur(4px); z-index: 7;
+    }
+    .overlay .card {
+      background: linear-gradient(180deg, #0f1530, #0b1124);
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 14px; padding: 18px;
+      width: min(560px, 92vw);
+      box-shadow: 0 20px 60px rgba(0,0,0,.45);
+    }
+    .overlay h3 { margin: 0 0 6px; font-size: 20px; }
+    .metric { display: flex; gap: 14px; flex-wrap: wrap; color: var(--sub); }
+    .pill {
+      background: rgba(255,255,255,.06); padding: 6px 10px; border-radius: 999px;
+      color: #fff; font-weight: 700;
+    }
+    .footer-note { color: var(--sub); font-size: 12px; text-align: center; margin-top: 6px; }
+
+    .loadingbar { height: 10px; background: rgba(255,255,255,.08); border-radius: 999px; overflow: hidden; }
+    .loadingbar > div { height: 100%; width: 0%; background: var(--accent); transition: width .2s ease; }
+
+    @media (max-width: 960px) {
+      .layout { grid-template-columns: 1fr; height: auto; }
+      #pano { height: 58vh; }
+      #map  { height: 50vh; }
+      .controls { top: auto; bottom: 18px; right: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">🌍 Mini GeoGuessr-like</div>
+    <div class="score">
+      <div>ラウンド: <b id="roundLabel">0 / 5</b></div>
+      <div>スコア: <b id="scoreLabel">0</b></div>
+      <div>候補: <b id="poolLabel">0 / 100</b></div>
+    </div>
+    <div class="prefs">
+      ラウンド数:
+      <input id="roundsInput" type="number" min="1" max="20" value="5" />
+      <button id="startBtn" class="btn">ゲーム開始</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <div style="position: relative;">
+      <div id="pano"></div>
+      <div class="panel">パノラマ：ドラッグで見回す／スクロールでズーム</div>
+      <div class="controls">
+        <button id="guessBtn" class="btn success" disabled>この場所にする！</button>
+        <button id="nextBtn"  class="btn secondary" disabled>次のラウンド ▶</button>
+        <button id="resetBtn" class="btn warn">リスタート</button>
+      </div>
+
+      <!-- 結果 -->
+      <div class="overlay" id="resultOverlay" aria-hidden="true">
+        <div class="card">
+          <h3 id="resultTitle">結果</h3>
+          <div class="metric" style="margin: 8px 0 12px;">
+            <div class="pill">距離 <span id="distLabel">—</span></div>
+            <div class="pill">獲得 <span id="pointsLabel">—</span> pt</div>
+          </div>
+          <div style="color: var(--sub); margin-bottom: 8px;">
+            正解：<b id="answerLabel">—</b><br/>
+            <small id="creditLabel" style="color: var(--sub);"></small>
+          </div>
+          <button id="closeResult" class="btn">閉じる</button>
+          <div class="footer-note">※ 線：推測地点→実際の地点</div>
+        </div>
+      </div>
+
+      <!-- ローディング -->
+      <div class="overlay" id="loadingOverlay" aria-hidden="true">
+        <div class="card">
+          <h3>Wikimedia から候補を収集中…</h3>
+          <div class="loadingbar" style="margin: 8px 0 10px;"><div id="loadingBar"></div></div>
+          <div id="loadingText" style="color: var(--sub);">準備中</div>
+          <div style="margin-top:10px; color: var(--sub); font-size: 12px;">
+            取得先カテゴリ：360° panoramas with equirectangular projection<br/>
+            （座標付き・JPEGを抽出）
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="map"></div>
+  </div>
+
+  <script>
+    // ========= 設定 =========
+    const DEFAULT_ROUNDS = 5;          // 初期ラウンド数（UIで変更可）
+    const TARGET_POOL_SIZE = 100;      // 候補数：100
+    const COMMONS_CATEGORY = 'Category:360° panoramas with equirectangular projection'; // 取得元
+    const COMMONS_API = 'https://commons.wikimedia.org/w/api.php';
+
+    // フォールバック（API失敗時に使用）
+    const FALLBACK_LOCATIONS = [
+      { id: 'alma', name: 'ALMA 観測所（チリ・アタカマ）', lat: -23.029, lng: -67.755,
+        panorama: 'https://pannellum.org/images/alma.jpg',
+        credit: 'Pannellum samples', sourcePage: 'https://pannellum.org/' },
+      { id: 'cerro_toco', name: 'Cerro Toco（チリ・アタカマ）', lat: -22.94638, lng: -67.777061,
+        panorama: 'https://pannellum.org/images/cerro-toco-0.jpg',
+        credit: 'Pannellum samples', sourcePage: 'https://pannellum.org/' },
+      { id: 'bma', name: 'Baltimore Museum of Art（米・ボルチモア）', lat: 39.32611, lng: -76.61917,
+        panorama: 'https://pannellum.org/images/bma-1.jpg',
+        credit: 'Pannellum samples', sourcePage: 'https://pannellum.org/' },
+    ];
+
+    // ========= ゲーム状態 =========
+    let viewer = null;
+    let map = null;
+    let guessMarker = null;
+    let answerMarker = null;
+    let line = null;
+
+    let ROUNDS = DEFAULT_ROUNDS;
+    let round = 0;
+    let score = 0;
+
+    let POOL = [];        // 候補100件
+    let order = [];       // 今回プレイで使う順
+    let current = null;   // 現在のロケーション
+    let hasGuessed = false;
+    let selectedLatLng = null;
+
+    // ========= 初期化 =========
+    initMap();
+    initUI();
+
+    function initUI() {
+      document.getElementById('roundsInput').value = DEFAULT_ROUNDS;
+      document.getElementById('poolLabel').textContent = `0 / ${TARGET_POOL_SIZE}`;
+      document.getElementById('roundLabel').textContent = `0 / ${DEFAULT_ROUNDS}`;
+      document.getElementById('scoreLabel').textContent = `0`;
+    }
+
+    function initMap() {
+      map = L.map('map', { worldCopyJump: true, attributionControl: true })
+              .setView([20, 0], 2);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      map.on('click', (e) => {
+        if (hasGuessed) return; // 既に判定済み
+        selectedLatLng = e.latlng;
+        if (!guessMarker) {
+          guessMarker = L.marker(e.latlng, { title: 'あなたの推測' }).addTo(map);
+        } else {
+          guessMarker.setLatLng(e.latlng);
+        }
+        document.getElementById('guessBtn').disabled = false;
+      });
+    }
+
+    function initViewer(panoramaUrl) {
+      if (viewer) { viewer.destroy(); viewer = null; }
+      viewer = pannellum.viewer('pano', {
+        type: 'equirectangular',
+        panorama: panoramaUrl,
+        autoLoad: true,
+        showFullscreenCtrl: true,
+        hfov: 100
+      });
+    }
+
+    // ========= ユーティリティ =========
+    const toRad = d => d * Math.PI / 180;
+    function haversineKm(lat1, lon1, lat2, lon2) {
+      const R = 6371000; // m
+      const dLat = toRad(lat2 - lat1);
+      const dLon = toRad(lon2 - lon1);
+      const a = Math.sin(dLat/2)**2 +
+                Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) *
+                Math.sin(dLon/2)**2;
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return (R * c) / 1000; // km
+    }
+    function formatKm(km) {
+      if (km < 1) return `${(km*1000).toFixed(0)} m`;
+      if (km < 100) return `${km.toFixed(1)} km`;
+      return `${Math.round(km)} km`;
+    }
+    // 0〜5000点（指数減衰）
+    function scoreFromDistance(km) {
+      const raw = 5000 * Math.exp(-km / 2000);
+      return Math.max(0, Math.round(raw));
+    }
+    function shuffle(arr) {
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    }
+    function updateHud() {
+      document.getElementById('roundLabel').textContent = `${round} / ${ROUNDS}`;
+      document.getElementById('scoreLabel').textContent = `${score}`;
+      document.getElementById('poolLabel').textContent  = `${POOL.length} / ${TARGET_POOL_SIZE}`;
+    }
+    function setButtons({ startDisabled, guessDisabled, nextDisabled }) {
+      document.getElementById('startBtn').disabled = startDisabled ?? false;
+      document.getElementById('guessBtn').disabled = guessDisabled ?? true;
+      document.getElementById('nextBtn').disabled  = nextDisabled  ?? true;
+    }
+
+    // ========= Wikimedia Commons から候補100件を作る =========
+    async function loadCommonsPanoramas(targetCount = 100, onProgress = () => {}) {
+      const selected = [];
+      let gcmcontinue = null;
+      let fetchedPages = 0;
+
+      while (selected.length < targetCount) {
+        const params = new URLSearchParams({
+          action: 'query',
+          generator: 'categorymembers',
+          gcmtitle: COMMONS_CATEGORY,
+          gcmtype: 'file',
+          gcmlimit: '50', // 無認証の既定上限
+          prop: 'imageinfo|coordinates',
+          iiprop: 'url|mime|size|extmetadata',
+          iiurlwidth: '4096', // 高解像サムネ（負荷軽減）
+          format: 'json',
+          origin: '*'
+        });
+        if (gcmcontinue) params.set('gcmcontinue', gcmcontinue);
+
+        const url = `${COMMONS_API}?${params.toString()}`;
+        const res = await fetch(url);
+        if (!res.ok) break;
+        const data = await res.json();
+
+        const pages = (data.query && data.query.pages) ? Object.values(data.query.pages) : [];
+        fetchedPages += pages.length;
+
+        for (const p of pages) {
+          const ii = p.imageinfo && p.imageinfo[0];
+          const coord = p.coordinates && p.coordinates[0];
+          if (!ii || !coord) continue;
+          if (ii.mime !== 'image/jpeg') continue;
+
+          // アスペクト比（2:1前後）判定
+          const w = (ii.thumbwidth || ii.width || 0);
+          const h = (ii.thumbheight || ii.height || 0);
+          if (w && h) {
+            const ratio = w / h;
+            if (ratio < 1.95 || ratio > 2.05) continue;
+          }
+
+          const title = (p.title || '').replace(/^File:/, '') || 'Untitled panorama';
+          const artist = ii.extmetadata?.Artist?.value?.replace(/<[^>]+>/g, '') || 'Unknown';
+          const license = ii.extmetadata?.LicenseShortName?.value || '';
+          const credit = `${artist} / Wikimedia Commons${license ? ' (' + license + ')' : ''}`;
+
+          selected.push({
+            id: `commons_${p.pageid}`,
+            name: title,
+            lat: coord.lat, lng: coord.lon,
+            panorama: ii.thumburl || ii.url,
+            credit,
+            sourcePage: `https://commons.wikimedia.org/wiki/${encodeURIComponent(p.title)}`
+          });
+
+          if (selected.length >= targetCount) break;
+        }
+
+        onProgress(Math.min(selected.length, targetCount), targetCount, fetchedPages);
+
+        gcmcontinue = data?.continue?.gcmcontinue;
+        if (!gcmcontinue) break;
+      }
+
+      return selected;
+    }
+
+    async function ensurePool() {
+      if (POOL.length >= TARGET_POOL_SIZE) return;
+
+      // ローディング表示
+      const overlay = document.getElementById('loadingOverlay');
+      const bar = document.getElementById('loadingBar');
+      const text = document.getElementById('loadingText');
+      overlay.style.display = 'grid';
+      bar.style.width = '0%';
+      text.textContent = '候補を探索中…';
+
+      try {
+        const results = await loadCommonsPanoramas(TARGET_POOL_SIZE, (ok, target, fetched) => {
+          bar.style.width = `${Math.round((ok/target)*100)}%`;
+          text.textContent = `抽出 ${ok} / ${target}　(取得ページ:${fetched})`;
+        });
+
+        if (results.length < 10) throw new Error('候補が足りません');
+        POOL = shuffle(results);
+        updateHud();
+      } catch (e) {
+        console.warn('Wikimedia取得に失敗：', e);
+        // フォールバック（3件）
+        POOL = [...FALLBACK_LOCATIONS];
+        updateHud();
+        alert('Wikimediaからの取得に失敗したため、サンプル3件で開始します。');
+      } finally {
+        overlay.style.display = 'none';
+      }
+    }
+
+    // ========= ラウンド管理 =========
+    async function startGame() {
+      ROUNDS = Math.max(1, Math.min(20, parseInt(document.getElementById('roundsInput').value || DEFAULT_ROUNDS, 10)));
+      document.getElementById('roundLabel').textContent = `0 / ${ROUNDS}`;
+
+      setButtons({ startDisabled: true, guessDisabled: true, nextDisabled: true });
+      await ensurePool(); // 候補100件を準備（フォールバックあり）
+
+      // 今回の出題順を作成（候補からランダム抽出）
+      order = shuffle([...POOL]).slice(0, ROUNDS);
+      round = 0; score = 0;
+      nextRound();
+    }
+
+    function nextRound() {
+      // 片付け
+      hasGuessed = false;
+      selectedLatLng = null;
+      if (guessMarker) { map.removeLayer(guessMarker); guessMarker = null; }
+      if (answerMarker){ map.removeLayer(answerMarker); answerMarker = null; }
+      if (line)        { map.removeLayer(line);         line = null; }
+      map.setView([20, 0], 2);
+
+      // ラウンド進行
+      round++;
+      if (round > ROUNDS) {
+        alert(`ゲーム終了！ 総得点: ${score} pt`);
+        round = ROUNDS;
+        setButtons({ startDisabled: false, guessDisabled: true, nextDisabled: true });
+        return;
+      }
+      current = order[round - 1];
+      initViewer(current.panorama);
+      updateHud();
+      setButtons({ startDisabled: true, guessDisabled: true, nextDisabled: true });
+
+      // 結果オーバーレイを隠す
+      document.getElementById('resultOverlay').style.display = 'none';
+    }
+
+    function makeGuess() {
+      if (!selectedLatLng || !current) return;
+      hasGuessed = true;
+
+      const answer = L.latLng(current.lat, current.lng);
+
+      // 正解マーカー
+      answerMarker = L.marker(answer, { title: '正解' }).addTo(map);
+
+      // ライン（推測 → 正解）
+      line = L.polyline([selectedLatLng, answer], { weight: 3, opacity: .9, dashArray: '6 6' }).addTo(map);
+
+      // 両点が入るようにズーム
+      const bounds = L.latLngBounds([selectedLatLng, answer]).pad(0.5);
+      map.fitBounds(bounds, { maxZoom: 6 });
+
+      // スコア計算
+      const dKm = haversineKm(selectedLatLng.lat, selectedLatLng.lng, answer.lat, answer.lng);
+      const pts = scoreFromDistance(dKm);
+      score += pts;
+      updateHud();
+
+      // 結果表示
+      document.getElementById('resultTitle').textContent = `ラウンド ${round} の結果`;
+      document.getElementById('distLabel').textContent   = formatKm(dKm);
+      document.getElementById('pointsLabel').textContent = pts.toString();
+      const nameLine = current.name.length > 120 ? current.name.slice(0,117) + '…' : current.name;
+      document.getElementById('answerLabel').innerHTML = `${nameLine}`;
+      document.getElementById('creditLabel').innerHTML = `Credit: ${current.credit} · <a href="${current.sourcePage}" target="_blank" rel="noopener">File page</a>`;
+      document.getElementById('resultOverlay').style.display = 'grid';
+
+      // ボタン状態
+      setButtons({ startDisabled: true, guessDisabled: true, nextDisabled: false });
+      document.getElementById('nextBtn').textContent = (round === ROUNDS) ? 'ゲーム終了 ▶' : '次のラウンド ▶';
+    }
+
+    function resetGame() {
+      round = 0; score = 0; current = null;
+      order = [];
+      updateHud();
+      if (viewer) { viewer.destroy(); viewer = null; }
+      if (guessMarker) { map.removeLayer(guessMarker); guessMarker = null; }
+      if (answerMarker){ map.removeLayer(answerMarker); answerMarker = null; }
+      if (line)        { map.removeLayer(line);         line = null; }
+      map.setView([20, 0], 2);
+      setButtons({ startDisabled: false, guessDisabled: true, nextDisabled: true });
+      document.getElementById('resultOverlay').style.display = 'none';
+    }
+
+    // ========= イベント =========
+    document.getElementById('startBtn').addEventListener('click', startGame);
+    document.getElementById('guessBtn').addEventListener('click', makeGuess);
+    document.getElementById('nextBtn').addEventListener('click', nextRound);
+    document.getElementById('resetBtn').addEventListener('click', resetGame);
+    document.getElementById('closeResult').addEventListener('click', () => {
+      document.getElementById('resultOverlay').style.display = 'none';
+    });
+
+    // 初期ボタン状態
+    setButtons({ startDisabled: false, guessDisabled: true, nextDisabled: true });
+    updateHud();
+  </script>
+</body>
+</html>
