@@ -1,6 +1,6 @@
 // ========= 設定 =========
 const ROUNDS_PER_GAME = 3; // 1ゲームで抽選するラウンド数
-const TARGET_POOL_SIZE = 20; // 候補数：20
+const TARGET_POOL_SIZE = 10; // 候補数：10
 const COMMONS_CATEGORY = 'Category:360° panoramas with equirectangular projection'; // 取得元
 const COMMONS_API = 'https://commons.wikimedia.org/w/api.php';
 
