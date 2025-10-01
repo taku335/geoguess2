@@ -4,7 +4,7 @@
 
 ## 機能
 
-- Google API キーなしでも遊べるオープンデータの 360° 画像セットを内蔵
+- Google API キーなしでも遊べる、ウェブ上のオープンデータ 360° 画像(JPEG)を自動取得
 - 20 件の候補リストを作成し、その中から 3 ラウンド分をランダムに出題
 - Google Maps JavaScript API の Street View ビューア（ドラッグで視点移動、ホイール/ピンチでズーム）
 - Leaflet ベースの推測用マップでタップ/クリックして位置を指定
@@ -37,7 +37,7 @@
   - `docs/app.js`: ゲームロジックと Street View メタデータ取得処理
 - Leaflet は CDN から読み込んでいます。オフライン対応が必要な場合はローカルにホストするか、バンドルしてください。
 - Google Maps JavaScript API は動的に読み込みます。API キーは `localStorage` に保存され、`window.GOOGLE_MAPS_API_KEY` にも反映されます。API キーが未設定の場合は Photo Sphere Viewer を使ってオープンデータの 360° 画像を表示します。
-- API キー未設定時に表示する 360° 画像は、Pannellum のサンプルや Google Developers の VR データセットなど CC ライセンス/公開素材を参照しています。
+- API キー未設定時に表示する 360° 画像は、Wikimedia Commons や ESO などの公開リポジトリからランタイムに取得した CC ライセンス素材 (JPEG のみ) を使用します。PNG 形式は利用しません。
 - Street View の候補は世界各地の都市圏をランダムにサンプリングし、メタデータ API から取得しています。クォータ制限に注意してください。
 
 ## ライセンス

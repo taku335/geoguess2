@@ -8,78 +8,89 @@ const STREET_VIEW_SEARCH_RADIUS = 50000; // m
 const MAX_METADATA_ATTEMPTS = TARGET_POOL_SIZE * 60;
 
 // Google Street View を使わない場合のオープンデータ 360° 画像
+const WIKIMEDIA_IMAGEINFO_ENDPOINT = 'https://commons.wikimedia.org/w/api.php';
+const wikimediaImageCache = new Map();
+
 const OPEN_PANORAMAS = [
   {
     id: 'alma_observatory',
     name: 'ALMA Observatory — San Pedro de Atacama, Chile',
     lat: -23.0293,
     lng: -67.7535,
-    panoramaUrl: 'https://pannellum.org/images/alma.jpg',
+    panoramaUrl: 'https://cdn.eso.org/images/large/potw1340a.jpg',
     credit: 'ESO / Babak Tafreshi (CC BY 4.0)',
-    sourcePage: 'https://www.eso.org/public/images/potw1340a/'
+    sourcePage: 'https://www.eso.org/public/images/potw1340a/',
+    fallbackUrls: ['https://pannellum.org/images/alma.jpg']
   },
   {
     id: 'cerro_toco_summit',
     name: 'Cerro Toco Summit — Antofagasta Region, Chile',
     lat: -22.9459,
     lng: -67.7733,
-    panoramaUrl: 'https://pannellum.org/images/cerro-toco-0.jpg',
     credit: 'Petr Brož (CC BY-SA 4.0)',
-    sourcePage: 'https://commons.wikimedia.org/wiki/File:Cerro_Toco_Atacama_Desert_360_Panorama.jpg'
+    sourcePage: 'https://commons.wikimedia.org/wiki/File:Cerro_Toco_Atacama_Desert_360_Panorama.jpg',
+    wikimediaFile: 'Cerro_Toco_Atacama_Desert_360_Panorama.jpg',
+    fallbackUrls: ['https://pannellum.org/images/cerro-toco-0.jpg']
   },
   {
     id: 'cerro_toco_ridge',
     name: 'Cerro Toco Ridge — Antofagasta Region, Chile',
     lat: -22.9494,
     lng: -67.7817,
-    panoramaUrl: 'https://pannellum.org/images/cerro-toco-1.jpg',
     credit: 'Petr Brož (CC BY-SA 4.0)',
-    sourcePage: 'https://commons.wikimedia.org/wiki/File:Cerro_Toco_Atacama_Desert_360_Panorama_2.jpg'
+    sourcePage: 'https://commons.wikimedia.org/wiki/File:Cerro_Toco_Atacama_Desert_360_Panorama_2.jpg',
+    wikimediaFile: 'Cerro_Toco_Atacama_Desert_360_Panorama_2.jpg',
+    fallbackUrls: ['https://pannellum.org/images/cerro-toco-1.jpg']
   },
   {
     id: 'valle_de_la_luna',
     name: 'Valle de la Luna — San Pedro de Atacama, Chile',
     lat: -22.9605,
     lng: -67.7839,
-    panoramaUrl: 'https://pannellum.org/images/cerro-toco-2.jpg',
     credit: 'Petr Brož (CC BY-SA 4.0)',
-    sourcePage: 'https://commons.wikimedia.org/wiki/File:Atacama_Desert_Moon_Valley_360_Panorama.jpg'
+    sourcePage: 'https://commons.wikimedia.org/wiki/File:Atacama_Desert_Moon_Valley_360_Panorama.jpg',
+    wikimediaFile: 'Atacama_Desert_Moon_Valley_360_Panorama.jpg',
+    fallbackUrls: ['https://pannellum.org/images/cerro-toco-2.jpg']
   },
   {
-    id: 'sechelt_inlet',
-    name: 'Sechelt Inlet — British Columbia, Canada',
-    lat: 49.545,
-    lng: -123.763,
-    panoramaUrl: 'https://storage.googleapis.com/vrview/examples/pano.jpg',
-    credit: '© Google — Sechelt Inlet',
-    sourcePage: 'https://developers.google.com/vr/data' 
+    id: 'blue_mosque_istanbul',
+    name: 'Sultan Ahmed Mosque — Istanbul, Turkey',
+    lat: 41.0054,
+    lng: 28.9768,
+    credit: 'Benh LIEU SONG (CC BY-SA 3.0)',
+    sourcePage: 'https://commons.wikimedia.org/wiki/File:Sultan_Ahmed_Mosque_Interior_360_Panorama.jpg',
+    wikimediaFile: 'Sultan_Ahmed_Mosque_Interior_360_Panorama.jpg',
+    fallbackUrls: ['https://commons.wikimedia.org/wiki/Special:FilePath/Sultan_Ahmed_Mosque_Interior_360_Panorama.jpg']
   },
   {
-    id: 'great_barrier_reef',
-    name: 'Great Barrier Reef — Queensland, Australia',
-    lat: -18.2871,
-    lng: 147.6992,
-    panoramaUrl: 'https://storage.googleapis.com/vrview/examples/coral.jpg',
-    credit: '© Google — Great Barrier Reef',
-    sourcePage: 'https://developers.google.com/vr/data'
+    id: 'matterhorn_gornergrat',
+    name: 'Matterhorn from Gornergrat — Valais, Switzerland',
+    lat: 45.9826,
+    lng: 7.7833,
+    credit: 'Michael Clarke Stuff (CC BY-SA 2.0)',
+    sourcePage: 'https://commons.wikimedia.org/wiki/File:Matterhorn_from_Gornergrat_360_panorama.jpg',
+    wikimediaFile: 'Matterhorn_from_Gornergrat_360_panorama.jpg',
+    fallbackUrls: ['https://commons.wikimedia.org/wiki/Special:FilePath/Matterhorn_from_Gornergrat_360_panorama.jpg']
   },
   {
-    id: 'fremont_factory',
-    name: 'Tesla Factory — Fremont, California, USA',
-    lat: 37.4946,
-    lng: -121.9446,
-    panoramaUrl: 'https://storage.googleapis.com/vrview/examples/tesla/gearvr-pano.jpg',
-    credit: '© Tesla / Google',
-    sourcePage: 'https://developers.google.com/vr/data'
+    id: 'grand_canyon_toroweap',
+    name: 'Toroweap Overlook — Grand Canyon, USA',
+    lat: 36.2113,
+    lng: -113.0608,
+    credit: 'Tuxyso (CC BY-SA 4.0)',
+    sourcePage: 'https://commons.wikimedia.org/wiki/File:Grand_Canyon_at_Toroweap_Overlook_-_360_panorama.jpg',
+    wikimediaFile: 'Grand_Canyon_at_Toroweap_Overlook_-_360_panorama.jpg',
+    fallbackUrls: ['https://commons.wikimedia.org/wiki/Special:FilePath/Grand_Canyon_at_Toroweap_Overlook_-_360_panorama.jpg']
   },
   {
-    id: 'mountain_lake',
-    name: 'Mountain Lake — Banff National Park, Canada',
-    lat: 51.4156,
-    lng: -116.2126,
-    panoramaUrl: 'https://storage.googleapis.com/vrview/examples/mountain.jpg',
-    credit: '© Google — Mountain Lake',
-    sourcePage: 'https://developers.google.com/vr/data'
+    id: 'mont_saint_michel',
+    name: 'Mont-Saint-Michel — Normandy, France',
+    lat: 48.636,
+    lng: -1.5115,
+    credit: 'Selbymay (CC BY-SA 4.0)',
+    sourcePage: 'https://commons.wikimedia.org/wiki/File:Mont_Saint-Michel_360_panorama.jpg',
+    wikimediaFile: 'Mont_Saint-Michel_360_panorama.jpg',
+    fallbackUrls: ['https://commons.wikimedia.org/wiki/Special:FilePath/Mont_Saint-Michel_360_panorama.jpg']
   }
 ];
 
@@ -134,9 +145,10 @@ let order = [];
 let current = null;
 let hasGuessed = false;
 let selectedLatLng = null;
+let openPanoramaTargetSize = OPEN_PANORAMA_POOL_SIZE;
 
 function getTargetPoolSize() {
-  const fallback = Math.min(TARGET_POOL_SIZE, OPEN_PANORAMA_POOL_SIZE);
+  const fallback = Math.min(TARGET_POOL_SIZE, openPanoramaTargetSize);
   return googleMapsApiKey ? TARGET_POOL_SIZE : fallback;
 }
 
@@ -519,23 +531,105 @@ async function loadStreetViewPanoramas(targetCount = TARGET_POOL_SIZE, onProgres
 async function loadOpenPanoramas(targetCount = getTargetPoolSize(), onProgress = () => {}) {
   const poolSize = Math.min(targetCount, OPEN_PANORAMA_POOL_SIZE);
   const shuffled = shuffle([...OPEN_PANORAMAS]);
-  const selected = shuffled.slice(0, poolSize).map((item) => ({
-    id: `open_${item.id}`,
-    type: 'photosphere',
-    name: item.name,
-    lat: item.lat,
-    lng: item.lng,
-    credit: item.credit,
-    sourcePage: item.sourcePage,
-    panoId: null,
-    panoramaUrl: item.panoramaUrl
-  }));
+  const selected = [];
+  let attempts = 0;
 
-  selected.forEach((_, index) => {
-    onProgress(index + 1, poolSize, index + 1);
-  });
+  for (const item of shuffled) {
+    if (selected.length >= poolSize) break;
+    attempts += 1;
+
+    try {
+      const panoramaUrl = await resolveOpenPanoramaUrl(item);
+      if (!panoramaUrl) continue;
+
+      if (/\.png($|\?)/i.test(panoramaUrl)) {
+        console.warn('Skipping PNG panorama URL', panoramaUrl);
+        continue;
+      }
+
+      selected.push({
+        id: `open_${item.id}`,
+        type: 'photosphere',
+        name: item.name,
+        lat: item.lat,
+        lng: item.lng,
+        credit: item.credit,
+        sourcePage: item.sourcePage,
+        panoId: null,
+        panoramaUrl
+      });
+
+      onProgress(selected.length, poolSize, attempts);
+    } catch (err) {
+      console.warn(`Failed to resolve panorama for ${item.id}:`, err);
+    }
+  }
 
   return selected;
+}
+
+async function resolveOpenPanoramaUrl(item) {
+  if (item.panoramaUrl) return item.panoramaUrl;
+
+  if (item.wikimediaFile) {
+    try {
+      return await resolveWikimediaImageUrl(item.wikimediaFile);
+    } catch (err) {
+      const fallbackUrl = pickFallbackUrl(item);
+      if (fallbackUrl) {
+        console.warn(`Falling back to alternate panorama for ${item.id}:`, err);
+        return fallbackUrl;
+      }
+      throw err;
+    }
+  }
+
+  const fallbackUrl = pickFallbackUrl(item);
+  if (fallbackUrl) return fallbackUrl;
+
+  throw new Error(`No panorama resolver available for ${item.id}`);
+}
+
+function pickFallbackUrl(item) {
+  if (!Array.isArray(item.fallbackUrls)) return null;
+  return item.fallbackUrls.find((url) => url && !/\.png($|\?)/i.test(url)) || null;
+}
+
+async function resolveWikimediaImageUrl(fileName) {
+  if (wikimediaImageCache.has(fileName)) {
+    return wikimediaImageCache.get(fileName);
+  }
+
+  const params = new URLSearchParams({
+    action: 'query',
+    format: 'json',
+    origin: '*',
+    prop: 'imageinfo',
+    iiprop: 'url',
+    titles: `File:${fileName}`
+  });
+
+  const response = await fetch(`${WIKIMEDIA_IMAGEINFO_ENDPOINT}?${params.toString()}`);
+  if (!response.ok) {
+    throw new Error(`Wikimedia API responded with ${response.status}`);
+  }
+
+  const payload = await response.json();
+  const pages = payload?.query?.pages;
+  const pageList = Array.isArray(pages) ? pages : Object.values(pages || {});
+  const imageInfo = pageList[0]?.imageinfo?.[0];
+  const imageUrl = imageInfo?.url;
+
+  if (!imageUrl) {
+    throw new Error(`Image URL not found for File:${fileName}`);
+  }
+
+  if (/\.png($|\?)/i.test(imageUrl)) {
+    throw new Error(`PNG assets are not allowed (${imageUrl})`);
+  }
+
+  wikimediaImageCache.set(fileName, imageUrl);
+  return imageUrl;
 }
 
 async function ensurePool() {
@@ -577,7 +671,8 @@ async function ensurePool() {
         bar.style.width = `${Math.round((ok / target) * 100)}%`;
         text.textContent = `読み込み ${ok} / ${target}`;
       });
-      if (results.length < targetCount) {
+      openPanoramaTargetSize = results.length || OPEN_PANORAMA_POOL_SIZE;
+      if (results.length === 0) {
         throw new Error('十分な 360° 画像候補を用意できませんでした。');
       }
     }
