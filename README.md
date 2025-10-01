@@ -4,6 +4,7 @@
 
 ## 機能
 
+- Google API キーなしでも遊べるオープンデータの 360° 画像セットを内蔵
 - 20 件の候補リストを作成し、その中から 3 ラウンド分をランダムに出題
 - Google Maps JavaScript API の Street View ビューア（ドラッグで視点移動、ホイール/ピンチでズーム）
 - Leaflet ベースの推測用マップでタップ/クリックして位置を指定
@@ -22,7 +23,7 @@
    python -m http.server 8000
    ```
    その後 `http://localhost:8000/` にアクセスします。
-3. 画面右上の「APIキー」欄に Google Maps Platform の API キーを入力して「保存」します（ブラウザのローカルストレージに保存されます）。
+3. Google Street View を利用したい場合は、画面右上の「Google APIキー (任意)」欄に Google Maps Platform の API キーを入力して「保存」します（ブラウザのローカルストレージに保存されます）。未入力でも内蔵のオープンデータ画像でプレイできます。
 4. 「ゲーム開始」を押すと候補の取得が始まり、ラウンド 1 がスタートします。
 5. ストリートビューを見ながら地図をクリック/タップして推測した位置をマークし、「この場所にする！」で回答します。
 6. 結果パネルで距離と得点を確認し、「次のラウンド ▶」で進行します。3 ラウンド終えると合計スコアが表示されます。
@@ -35,7 +36,8 @@
   - `docs/style.css`: レイアウトやテーマカラーを定義したスタイルシート
   - `docs/app.js`: ゲームロジックと Street View メタデータ取得処理
 - Leaflet は CDN から読み込んでいます。オフライン対応が必要な場合はローカルにホストするか、バンドルしてください。
-- Google Maps JavaScript API は動的に読み込みます。API キーは `localStorage` に保存され、`window.GOOGLE_MAPS_API_KEY` にも反映されます。
+- Google Maps JavaScript API は動的に読み込みます。API キーは `localStorage` に保存され、`window.GOOGLE_MAPS_API_KEY` にも反映されます。API キーが未設定の場合は Photo Sphere Viewer を使ってオープンデータの 360° 画像を表示します。
+- API キー未設定時に表示する 360° 画像は、Pannellum のサンプルや Google Developers の VR データセットなど CC ライセンス/公開素材を参照しています。
 - Street View の候補は世界各地の都市圏をランダムにサンプリングし、メタデータ API から取得しています。クォータ制限に注意してください。
 
 ## ライセンス
