@@ -342,7 +342,7 @@ async function initViewer(scene) {
       photoSphereViewer = new PhotoSphereViewer.Viewer({
         container: panoContainer,
         panorama: scene.panoramaUrl,
-        defaultYaw: '0deg',
+        defaultLong: '0deg',
         touchmoveTwoFingers: true,
         mousewheelCtrlKey: false,
         navbar: ['zoom', 'fullscreen'],
@@ -603,11 +603,17 @@ async function startGame() {
     return;
   }
 
-  order = shuffle([...POOL]).slice(0, ROUNDS_PER_GAME);
-  ROUNDS = order.length;
+  order = shuffle([...POOL]);
+  ROUNDS = Math.min(ROUNDS_PER_GAME, order.length);
   round = 0;
   score = 0;
-  document.getElementById('roundLabel').textContent = `0 / ${ROUNDS}`;
+  updateHud();
+
+  if (ROUNDS === 0) {
+    alert('利用可能な候補が見つかりませんでした。');
+    setButtons({ startDisabled: false, guessDisabled: true, nextDisabled: true });
+    return;
+  }
 
   try {
     await nextRound();
@@ -635,28 +641,33 @@ async function nextRound() {
   }
   map.setView([20, 0], 2);
 
-  round += 1;
-  if (round > ROUNDS) {
+  document.getElementById('resultOverlay').style.display = 'none';
+
+  if (round >= ROUNDS) {
     alert(`ゲーム終了！ 総得点: ${score} pt`);
-    round = ROUNDS;
     setButtons({ startDisabled: false, guessDisabled: true, nextDisabled: true });
     return;
   }
 
-  current = order[round - 1];
-
-  try {
-    await initViewer(current);
-  } catch (err) {
-    round -= 1;
-    current = null;
-    updateHud();
-    throw err;
+  while (order.length > 0) {
+    const candidate = order.shift();
+    try {
+      await initViewer(candidate);
+      current = candidate;
+      round += 1;
+      updateHud();
+      setButtons({ startDisabled: true, guessDisabled: true, nextDisabled: true });
+      return;
+    } catch (err) {
+      console.error('パノラマの読み込みに失敗:', err);
+    }
   }
 
+  current = null;
+  ROUNDS = round;
   updateHud();
-  setButtons({ startDisabled: true, guessDisabled: true, nextDisabled: true });
-  document.getElementById('resultOverlay').style.display = 'none';
+  alert('利用可能なパノラマを読み込めませんでした。ゲームを終了します。');
+  setButtons({ startDisabled: false, guessDisabled: true, nextDisabled: true });
 }
 
 function makeGuess() {
