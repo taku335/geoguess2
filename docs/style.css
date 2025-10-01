@@ -79,6 +79,30 @@ header {
   color: #fff;
 }
 
+.pref-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.api-key-group input[type="password"] {
+  width: clamp(160px, 26vw, 240px);
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #0f1530;
+  color: #fff;
+}
+
+.api-key-group input[type="password"]::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.api-key-group .btn {
+  min-width: 0;
+}
+
 .btn {
   appearance: none;
   border: 0;
@@ -104,6 +128,12 @@ header {
 .btn[disabled] {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.btn.small {
+  padding: 8px 10px;
+  min-height: 36px;
+  font-size: 13px;
 }
 
 .layout {
@@ -307,6 +337,20 @@ header {
   .prefs button {
     flex: 1 0 auto;
     width: auto;
+  }
+
+  .api-key-group {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+  }
+
+  .api-key-group input[type="password"] {
+    width: 100%;
+  }
+
+  .api-key-group .btn {
+    width: 100%;
   }
 
   .controls {
