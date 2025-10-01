@@ -101,6 +101,48 @@ function initViewer(panoramaUrl) {
 // ========= ユーティリティ =========
 const toRad = (d) => (d * Math.PI) / 180;
 
+function parseDms(value, ref = '') {
+  if (value == null) return null;
+  const raw = String(value)
+    .replace(/<[^>]+>/g, '')
+    .trim()
+    .replace(/,/g, '.');
+  if (!raw) return null;
+
+  const num = Number(raw);
+  if (!Number.isNaN(num)) {
+    return num;
+  }
+
+  const match = raw.match(/(-?\d+(?:\.\d+)?)\D*(\d+(?:\.\d+)?)?\D*(\d+(?:\.\d+)?)?/);
+  if (!match) return null;
+  const deg = parseFloat(match[1] || '0');
+  const min = parseFloat(match[2] || '0');
+  const sec = parseFloat(match[3] || '0');
+  if ([deg, min, sec].some((n) => Number.isNaN(n))) return null;
+  let decimal = Math.abs(deg) + min / 60 + sec / 3600;
+  const refUpper = ref.trim().toUpperCase();
+  const isNegative =
+    deg < 0 ||
+    refUpper === 'S' ||
+    refUpper === 'W' ||
+    /[SW]$/i.test(raw);
+  decimal = isNegative ? -Math.abs(decimal) : Math.abs(decimal);
+  return decimal;
+}
+
+function extractCoordsFromExtMetadata(extmetadata) {
+  if (!extmetadata) return null;
+  const latValue = extmetadata.GPSLatitude?.value;
+  const lonValue = extmetadata.GPSLongitude?.value;
+  if (!latValue || !lonValue) return null;
+  const lat = parseDms(latValue, extmetadata.GPSLatitudeRef?.value || '');
+  const lng = parseDms(lonValue, extmetadata.GPSLongitudeRef?.value || '');
+  if (lat == null || lng == null || Number.isNaN(lat) || Number.isNaN(lng)) return null;
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  return { lat, lon: lng };
+}
+
 function haversineKm(lat1, lon1, lat2, lon2) {
   const R = 6371000; // m
   const dLat = toRad(lat2 - lat1);
@@ -175,7 +217,8 @@ async function loadCommonsPanoramas(targetCount = TARGET_POOL_SIZE, onProgress =
 
     for (const p of pages) {
       const ii = p.imageinfo && p.imageinfo[0];
-      const coord = p.coordinates && p.coordinates[0];
+      const coord =
+        (p.coordinates && p.coordinates[0]) || extractCoordsFromExtMetadata(ii?.extmetadata);
       if (!ii || !coord) continue;
       if (ii.mime !== 'image/jpeg') continue;
 
@@ -196,7 +239,7 @@ async function loadCommonsPanoramas(targetCount = TARGET_POOL_SIZE, onProgress =
         id: `commons_${p.pageid}`,
         name: title,
         lat: coord.lat,
-        lng: coord.lon,
+        lng: coord.lon ?? coord.lng,
         panorama: ii.thumburl || ii.url,
         credit,
         sourcePage: `https://commons.wikimedia.org/wiki/${encodeURIComponent(p.title)}`
