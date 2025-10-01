@@ -1,60 +1,70 @@
 // ========= 設定 =========
 const ROUNDS_PER_GAME = 3; // 1ゲームで抽選するラウンド数
 const TARGET_POOL_SIZE = 10; // 候補数：10
-const COMMONS_CATEGORY = 'Category:360° panoramas with equirectangular projection'; // 取得元
-const COMMONS_API = 'https://commons.wikimedia.org/w/api.php';
 
-// フォールバック（API失敗時に使用）
-const FALLBACK_LOCATIONS = [
-  {
-    id: 'alma',
-    name: 'ALMA 観測所（チリ・アタカマ）',
-    lat: -23.029,
-    lng: -67.755,
-    panorama: 'https://pannellum.org/images/alma.jpg',
-    credit: 'Pannellum samples',
-    sourcePage: 'https://pannellum.org/'
-  },
-  {
-    id: 'cerro_toco',
-    name: 'Cerro Toco（チリ・アタカマ）',
-    lat: -22.94638,
-    lng: -67.777061,
-    panorama: 'https://pannellum.org/images/cerro-toco-0.jpg',
-    credit: 'Pannellum samples',
-    sourcePage: 'https://pannellum.org/'
-  },
-  {
-    id: 'bma',
-    name: 'Baltimore Museum of Art（米・ボルチモア）',
-    lat: 39.32611,
-    lng: -76.61917,
-    panorama: 'https://pannellum.org/images/bma-1.jpg',
-    credit: 'Pannellum samples',
-    sourcePage: 'https://pannellum.org/'
-  }
+const KEY_STORAGE_KEY = 'gsv_api_key';
+const STREET_VIEW_METADATA_ENDPOINT = 'https://maps.googleapis.com/maps/api/streetview/metadata';
+const STREET_VIEW_SEARCH_RADIUS = 50000; // m
+const MAX_METADATA_ATTEMPTS = TARGET_POOL_SIZE * 60;
+
+// ストリートビューの探索用に、世界中の都市圏をいくつかサンプリング
+const STREET_VIEW_SAMPLE_ZONES = [
+  { name: '東京都心', lat: 35.6804, lng: 139.769, radiusKm: 60 },
+  { name: 'ロンドン', lat: 51.5072, lng: -0.1276, radiusKm: 60 },
+  { name: 'ニューヨーク', lat: 40.7128, lng: -74.006, radiusKm: 60 },
+  { name: 'パリ', lat: 48.8566, lng: 2.3522, radiusKm: 50 },
+  { name: 'シドニー', lat: -33.8688, lng: 151.2093, radiusKm: 70 },
+  { name: 'シンガポール', lat: 1.3521, lng: 103.8198, radiusKm: 40 },
+  { name: 'サンパウロ', lat: -23.5505, lng: -46.6333, radiusKm: 70 },
+  { name: 'ケープタウン', lat: -33.9249, lng: 18.4241, radiusKm: 80 },
+  { name: 'バンクーバー', lat: 49.2827, lng: -123.1207, radiusKm: 80 },
+  { name: 'レイキャビク', lat: 64.1466, lng: -21.9426, radiusKm: 80 },
+  { name: 'ドバイ', lat: 25.2048, lng: 55.2708, radiusKm: 70 },
+  { name: 'ロサンゼルス', lat: 34.0522, lng: -118.2437, radiusKm: 70 },
+  { name: 'ローマ', lat: 41.9028, lng: 12.4964, radiusKm: 50 },
+  { name: 'ソウル', lat: 37.5665, lng: 126.978, radiusKm: 50 }
 ];
 
 // ========= ゲーム状態 =========
-let viewer = null;
 let map = null;
 let guessMarker = null;
 let answerMarker = null;
 let line = null;
+let streetViewPanorama = null;
+let googleMapsLoadPromise = null;
+
+let googleMapsApiKey = (window.GOOGLE_MAPS_API_KEY || '').trim();
+if (!googleMapsApiKey) {
+  try {
+    const storedKey = localStorage.getItem(KEY_STORAGE_KEY);
+    if (storedKey) {
+      googleMapsApiKey = storedKey;
+      window.GOOGLE_MAPS_API_KEY = storedKey;
+    }
+  } catch (err) {
+    console.warn('APIキーの読み込みに失敗しました', err);
+  }
+}
 
 let ROUNDS = ROUNDS_PER_GAME;
 let round = 0;
 let score = 0;
 
-let POOL = []; // 候補20件
-let order = []; // 今回プレイで使う順
-let current = null; // 現在のロケーション
+let POOL = [];
+let order = [];
+let current = null;
 let hasGuessed = false;
 let selectedLatLng = null;
 
 // ========= 初期化 =========
-initMap();
-initUI();
+boot();
+
+function boot() {
+  initUI();
+  initMap();
+  setButtons({ startDisabled: false, guessDisabled: true, nextDisabled: true });
+  updateHud();
+}
 
 function initUI() {
   const roundsInput = document.getElementById('roundsInput');
@@ -63,6 +73,17 @@ function initUI() {
   document.getElementById('poolLabel').textContent = `0 / ${TARGET_POOL_SIZE}`;
   document.getElementById('roundLabel').textContent = `0 / ${ROUNDS_PER_GAME}`;
   document.getElementById('scoreLabel').textContent = '0';
+
+  updateApiKeyUI();
+
+  document.getElementById('apiKeySave').addEventListener('click', handleApiKeySave);
+  document.getElementById('apiKeyClear').addEventListener('click', handleApiKeyClear);
+  document.getElementById('apiKeyInput').addEventListener('keydown', (ev) => {
+    if (ev.key === 'Enter') {
+      ev.preventDefault();
+      handleApiKeySave();
+    }
+  });
 }
 
 function initMap() {
@@ -84,64 +105,118 @@ function initMap() {
   });
 }
 
-function initViewer(panoramaUrl) {
-  if (viewer) {
-    viewer.destroy();
-    viewer = null;
+// ========= APIキー管理 =========
+function setApiKey(newKey) {
+  const trimmed = (newKey || '').trim();
+  googleMapsApiKey = trimmed;
+  window.GOOGLE_MAPS_API_KEY = trimmed;
+  try {
+    if (trimmed) {
+      localStorage.setItem(KEY_STORAGE_KEY, trimmed);
+    } else {
+      localStorage.removeItem(KEY_STORAGE_KEY);
+    }
+  } catch (err) {
+    console.warn('APIキーの保存に失敗しました', err);
   }
-  viewer = pannellum.viewer('pano', {
-    type: 'equirectangular',
-    panorama: panoramaUrl,
-    autoLoad: true,
-    showFullscreenCtrl: true,
-    hfov: 100
+  if (!trimmed) {
+    googleMapsLoadPromise = null;
+  }
+  updateApiKeyUI();
+}
+
+function handleApiKeySave() {
+  const input = document.getElementById('apiKeyInput');
+  const value = input.value.trim();
+  if (!value) {
+    alert('Google Maps Platform の API キーを入力してください。');
+    input.focus();
+    return;
+  }
+  setApiKey(value);
+  alert('APIキーを保存しました。');
+}
+
+function handleApiKeyClear() {
+  setApiKey('');
+  const input = document.getElementById('apiKeyInput');
+  input.value = '';
+  input.focus();
+}
+
+function updateApiKeyUI() {
+  const input = document.getElementById('apiKeyInput');
+  if (!input) return;
+  input.value = googleMapsApiKey;
+  input.placeholder = googleMapsApiKey ? '設定済み（変更可）' : 'Google Maps API Key';
+}
+
+// ========= Google Maps 読み込み =========
+async function ensureGoogleMapsReady() {
+  if (window.google?.maps?.StreetViewPanorama) return;
+  if (!googleMapsApiKey) {
+    throw new Error('Google Maps Platform の API キーが設定されていません。');
+  }
+  if (!googleMapsLoadPromise) {
+    googleMapsLoadPromise = loadGoogleMapsScript(googleMapsApiKey);
+  }
+  await googleMapsLoadPromise;
+  if (!window.google?.maps?.StreetViewPanorama) {
+    throw new Error('Google Maps JavaScript API の初期化に失敗しました。');
+  }
+}
+
+function loadGoogleMapsScript(key) {
+  if (window.google?.maps?.StreetViewPanorama) {
+    return Promise.resolve();
+  }
+  return new Promise((resolve, reject) => {
+    const existing = document.getElementById('google-maps-js');
+    if (existing) {
+      existing.remove();
+    }
+    const script = document.createElement('script');
+    script.id = 'google-maps-js';
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(key)}&v=quarterly`;
+    script.async = true;
+    script.defer = true;
+    script.addEventListener('load', () => resolve());
+    script.addEventListener('error', () => {
+      googleMapsLoadPromise = null;
+      reject(new Error('Google Maps JavaScript API の読み込みに失敗しました。'));
+    });
+    document.head.appendChild(script);
   });
+}
+
+async function initViewer(panoId) {
+  await ensureGoogleMapsReady();
+  if (!document.getElementById('pano')) {
+    throw new Error('ストリートビューを表示する要素が見つかりません。');
+  }
+  if (!streetViewPanorama) {
+    streetViewPanorama = new google.maps.StreetViewPanorama(document.getElementById('pano'), {
+      pano: panoId,
+      pov: { heading: 0, pitch: 0 },
+      zoom: 1,
+      visible: true,
+      addressControl: false,
+      fullscreenControl: true,
+      motionTrackingControl: false,
+      linksControl: true,
+      zoomControl: true,
+      scrollwheel: true
+    });
+  } else {
+    streetViewPanorama.setPano(panoId);
+  }
+  streetViewPanorama.setPov({ heading: 0, pitch: 0 });
+  streetViewPanorama.setZoom(1);
+  streetViewPanorama.setVisible(true);
 }
 
 // ========= ユーティリティ =========
 const toRad = (d) => (d * Math.PI) / 180;
-
-function parseDms(value, ref = '') {
-  if (value == null) return null;
-  const raw = String(value)
-    .replace(/<[^>]+>/g, '')
-    .trim()
-    .replace(/,/g, '.');
-  if (!raw) return null;
-
-  const num = Number(raw);
-  if (!Number.isNaN(num)) {
-    return num;
-  }
-
-  const match = raw.match(/(-?\d+(?:\.\d+)?)\D*(\d+(?:\.\d+)?)?\D*(\d+(?:\.\d+)?)?/);
-  if (!match) return null;
-  const deg = parseFloat(match[1] || '0');
-  const min = parseFloat(match[2] || '0');
-  const sec = parseFloat(match[3] || '0');
-  if ([deg, min, sec].some((n) => Number.isNaN(n))) return null;
-  let decimal = Math.abs(deg) + min / 60 + sec / 3600;
-  const refUpper = ref.trim().toUpperCase();
-  const isNegative =
-    deg < 0 ||
-    refUpper === 'S' ||
-    refUpper === 'W' ||
-    /[SW]$/i.test(raw);
-  decimal = isNegative ? -Math.abs(decimal) : Math.abs(decimal);
-  return decimal;
-}
-
-function extractCoordsFromExtMetadata(extmetadata) {
-  if (!extmetadata) return null;
-  const latValue = extmetadata.GPSLatitude?.value;
-  const lonValue = extmetadata.GPSLongitude?.value;
-  if (!latValue || !lonValue) return null;
-  const lat = parseDms(latValue, extmetadata.GPSLatitudeRef?.value || '');
-  const lng = parseDms(lonValue, extmetadata.GPSLongitudeRef?.value || '');
-  if (lat == null || lng == null || Number.isNaN(lat) || Number.isNaN(lng)) return null;
-  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
-  return { lat, lon: lng };
-}
 
 function haversineKm(lat1, lon1, lat2, lon2) {
   const R = 6371000; // m
@@ -186,72 +261,102 @@ function setButtons({ startDisabled, guessDisabled, nextDisabled }) {
   document.getElementById('nextBtn').disabled = nextDisabled ?? true;
 }
 
-// ========= Wikimedia Commons から候補20件を作る =========
-async function loadCommonsPanoramas(targetCount = TARGET_POOL_SIZE, onProgress = () => {}) {
+// ========= Google Street View から候補を作る =========
+function randomPointInZone(zone) {
+  const radiusMeters = Math.max(1000, Math.min((zone.radiusKm || 50) * 1000, STREET_VIEW_SEARCH_RADIUS));
+  const t = 2 * Math.PI * Math.random();
+  const u = Math.random();
+  const r = Math.sqrt(u) * radiusMeters;
+  const dx = r * Math.cos(t);
+  const dy = r * Math.sin(t);
+  const newLat = zone.lat + (dy / 111320);
+  const newLng = zone.lng + (dx / (111320 * Math.cos(toRad(zone.lat))));
+  return { lat: newLat, lng: newLng, radiusMeters };
+}
+
+async function fetchStreetViewMetadata(lat, lng, radiusMeters) {
+  const params = new URLSearchParams({
+    location: `${lat},${lng}`,
+    radius: Math.round(radiusMeters ?? STREET_VIEW_SEARCH_RADIUS).toString(),
+    source: 'outdoor',
+    key: googleMapsApiKey
+  });
+  const res = await fetch(`${STREET_VIEW_METADATA_ENDPOINT}?${params.toString()}`);
+  if (!res.ok) {
+    throw new Error(`Street View metadata の取得に失敗しました (HTTP ${res.status}).`);
+  }
+  const data = await res.json();
+  return data;
+}
+
+function metadataToLocation(data, fallbackZone) {
+  const loc = data?.location || {};
+  const lat = typeof loc.lat === 'number' ? loc.lat : loc.latLng?.lat;
+  const lng = typeof loc.lng === 'number' ? loc.lng : loc.latLng?.lng;
+  if (typeof lat !== 'number' || typeof lng !== 'number') return null;
+  const parts = [loc.description, loc.region, loc.city, loc.country, fallbackZone?.name]
+    .filter((part, index, arr) => typeof part === 'string' && part.trim() && arr.indexOf(part) === index);
+  const name = parts.length ? parts.join(' · ') : `Street View panorama (${lat.toFixed(2)}, ${lng.toFixed(2)})`;
+  return {
+    lat,
+    lng,
+    name
+  };
+}
+
+async function loadStreetViewPanoramas(targetCount = TARGET_POOL_SIZE, onProgress = () => {}) {
   const selected = [];
-  let gcmcontinue = null;
-  let fetchedPages = 0;
+  const usedPanos = new Set();
+  let attempts = 0;
 
-  while (selected.length < targetCount) {
-    const params = new URLSearchParams({
-      action: 'query',
-      generator: 'categorymembers',
-      gcmtitle: COMMONS_CATEGORY,
-      gcmtype: 'file',
-      gcmlimit: '50', // 無認証の既定上限
-      prop: 'imageinfo|coordinates',
-      iiprop: 'url|mime|size|extmetadata',
-      iiurlwidth: '4096', // 高解像サムネ（負荷軽減）
-      format: 'json',
-      origin: '*'
-    });
-    if (gcmcontinue) params.set('gcmcontinue', gcmcontinue);
+  while (selected.length < targetCount && attempts < MAX_METADATA_ATTEMPTS) {
+    attempts += 1;
+    const zone = STREET_VIEW_SAMPLE_ZONES[Math.floor(Math.random() * STREET_VIEW_SAMPLE_ZONES.length)];
+    const sample = randomPointInZone(zone);
 
-    const url = `${COMMONS_API}?${params.toString()}`;
-    const res = await fetch(url);
-    if (!res.ok) break;
-    const data = await res.json();
-
-    const pages = data.query && data.query.pages ? Object.values(data.query.pages) : [];
-    fetchedPages += pages.length;
-
-    for (const p of pages) {
-      const ii = p.imageinfo && p.imageinfo[0];
-      const coord =
-        (p.coordinates && p.coordinates[0]) || extractCoordsFromExtMetadata(ii?.extmetadata);
-      if (!ii || !coord) continue;
-      if (ii.mime !== 'image/jpeg') continue;
-
-      // アスペクト比（2:1前後）判定
-      const w = ii.thumbwidth || ii.width || 0;
-      const h = ii.thumbheight || ii.height || 0;
-      if (w && h) {
-        const ratio = w / h;
-        if (ratio < 1.95 || ratio > 2.05) continue;
-      }
-
-      const title = (p.title || '').replace(/^File:/, '') || 'Untitled panorama';
-      const artist = ii.extmetadata?.Artist?.value?.replace(/<[^>]+>/g, '') || 'Unknown';
-      const license = ii.extmetadata?.LicenseShortName?.value || '';
-      const credit = `${artist} / Wikimedia Commons${license ? ` (${license})` : ''}`;
-
-      selected.push({
-        id: `commons_${p.pageid}`,
-        name: title,
-        lat: coord.lat,
-        lng: coord.lon ?? coord.lng,
-        panorama: ii.thumburl || ii.url,
-        credit,
-        sourcePage: `https://commons.wikimedia.org/wiki/${encodeURIComponent(p.title)}`
-      });
-
-      if (selected.length >= targetCount) break;
+    let metadata;
+    try {
+      metadata = await fetchStreetViewMetadata(sample.lat, sample.lng, sample.radiusMeters);
+    } catch (err) {
+      console.warn('Street View metadata の取得に失敗:', err);
+      continue;
     }
 
-    onProgress(Math.min(selected.length, targetCount), targetCount, fetchedPages);
+    if (!metadata) continue;
+    const status = metadata.status;
+    if (status === 'OVER_QUERY_LIMIT' || status === 'REQUEST_DENIED') {
+      const msg = metadata.error_message || 'Google Street View API から拒否されました。';
+      throw new Error(msg);
+    }
+    if (status !== 'OK') {
+      onProgress(selected.length, targetCount, attempts);
+      continue;
+    }
 
-    gcmcontinue = data?.continue?.gcmcontinue;
-    if (!gcmcontinue) break;
+    const panoId = metadata.pano_id || metadata.panoId;
+    if (!panoId || usedPanos.has(panoId)) {
+      onProgress(selected.length, targetCount, attempts);
+      continue;
+    }
+
+    const location = metadataToLocation(metadata, zone);
+    if (!location) {
+      onProgress(selected.length, targetCount, attempts);
+      continue;
+    }
+
+    usedPanos.add(panoId);
+    selected.push({
+      id: `gsv_${panoId}`,
+      name: location.name,
+      lat: location.lat,
+      lng: location.lng,
+      panoId,
+      credit: metadata.copyright || '© Google',
+      sourcePage: `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${location.lat},${location.lng}&pano=${panoId}`
+    });
+
+    onProgress(Math.min(selected.length, targetCount), targetCount, attempts);
   }
 
   return selected;
@@ -260,7 +365,6 @@ async function loadCommonsPanoramas(targetCount = TARGET_POOL_SIZE, onProgress =
 async function ensurePool() {
   if (POOL.length >= TARGET_POOL_SIZE) return;
 
-  // ローディング表示
   const overlay = document.getElementById('loadingOverlay');
   const bar = document.getElementById('loadingBar');
   const text = document.getElementById('loadingText');
@@ -269,20 +373,21 @@ async function ensurePool() {
   text.textContent = '候補を探索中…';
 
   try {
-    const results = await loadCommonsPanoramas(TARGET_POOL_SIZE, (ok, target, fetched) => {
+    if (!googleMapsApiKey) {
+      throw new Error('Google Maps Platform の API キーが設定されていません。');
+    }
+
+    const results = await loadStreetViewPanoramas(TARGET_POOL_SIZE, (ok, target, attempts) => {
       bar.style.width = `${Math.round((ok / target) * 100)}%`;
-      text.textContent = `抽出 ${ok} / ${target}　(取得ページ:${fetched})`;
+      text.textContent = `抽出 ${ok} / ${target}　(試行:${attempts})`;
     });
 
-    if (results.length < TARGET_POOL_SIZE) throw new Error('候補が足りません');
+    if (results.length < TARGET_POOL_SIZE) {
+      throw new Error('十分な Street View パノラマを見つけられませんでした。');
+    }
+
     POOL = shuffle(results);
     updateHud();
-  } catch (e) {
-    console.warn('Wikimedia取得に失敗：', e);
-    // フォールバック（3件）
-    POOL = [...FALLBACK_LOCATIONS];
-    updateHud();
-    alert('Wikimediaからの取得に失敗したため、サンプル候補で開始します。');
   } finally {
     overlay.style.display = 'none';
   }
@@ -291,21 +396,33 @@ async function ensurePool() {
 // ========= ラウンド管理 =========
 async function startGame() {
   document.getElementById('roundLabel').textContent = `0 / ${ROUNDS_PER_GAME}`;
-
   setButtons({ startDisabled: true, guessDisabled: true, nextDisabled: true });
-  await ensurePool(); // 候補20件を準備（フォールバックあり）
 
-  // 今回の出題順を作成（候補からランダム抽出）
+  try {
+    await ensurePool();
+  } catch (err) {
+    console.error('候補の準備に失敗:', err);
+    alert(err.message || 'Street View から候補を取得できませんでした。APIキーや利用制限を確認してください。');
+    setButtons({ startDisabled: false, guessDisabled: true, nextDisabled: true });
+    return;
+  }
+
   order = shuffle([...POOL]).slice(0, ROUNDS_PER_GAME);
   ROUNDS = order.length;
   round = 0;
   score = 0;
   document.getElementById('roundLabel').textContent = `0 / ${ROUNDS}`;
-  nextRound();
+
+  try {
+    await nextRound();
+  } catch (err) {
+    console.error('最初のラウンドの開始に失敗:', err);
+    alert(err.message || 'ストリートビューの読み込みに失敗しました。APIキーや利用制限を確認してください。');
+    setButtons({ startDisabled: false, guessDisabled: true, nextDisabled: true });
+  }
 }
 
-function nextRound() {
-  // 片付け
+async function nextRound() {
   hasGuessed = false;
   selectedLatLng = null;
   if (guessMarker) {
@@ -322,7 +439,6 @@ function nextRound() {
   }
   map.setView([20, 0], 2);
 
-  // ラウンド進行
   round += 1;
   if (round > ROUNDS) {
     alert(`ゲーム終了！ 総得点: ${score} pt`);
@@ -330,12 +446,20 @@ function nextRound() {
     setButtons({ startDisabled: false, guessDisabled: true, nextDisabled: true });
     return;
   }
+
   current = order[round - 1];
-  initViewer(current.panorama);
+
+  try {
+    await initViewer(current.panoId);
+  } catch (err) {
+    round -= 1;
+    current = null;
+    updateHud();
+    throw err;
+  }
+
   updateHud();
   setButtons({ startDisabled: true, guessDisabled: true, nextDisabled: true });
-
-  // 結果オーバーレイを隠す
   document.getElementById('resultOverlay').style.display = 'none';
 }
 
@@ -345,32 +469,25 @@ function makeGuess() {
 
   const answer = L.latLng(current.lat, current.lng);
 
-  // 正解マーカー
   answerMarker = L.marker(answer, { title: '正解' }).addTo(map);
-
-  // ライン（推測 → 正解）
   line = L.polyline([selectedLatLng, answer], { weight: 3, opacity: 0.9, dashArray: '6 6' }).addTo(map);
 
-  // 両点が入るようにズーム
   const bounds = L.latLngBounds([selectedLatLng, answer]).pad(0.5);
   map.fitBounds(bounds, { maxZoom: 6 });
 
-  // スコア計算
   const dKm = haversineKm(selectedLatLng.lat, selectedLatLng.lng, answer.lat, answer.lng);
   const pts = scoreFromDistance(dKm);
   score += pts;
   updateHud();
 
-  // 結果表示
   document.getElementById('resultTitle').textContent = `ラウンド ${round} の結果`;
   document.getElementById('distLabel').textContent = formatKm(dKm);
   document.getElementById('pointsLabel').textContent = pts.toString();
   const nameLine = current.name.length > 120 ? `${current.name.slice(0, 117)}…` : current.name;
   document.getElementById('answerLabel').innerHTML = `${nameLine}`;
-  document.getElementById('creditLabel').innerHTML = `Credit: ${current.credit} · <a href="${current.sourcePage}" target="_blank" rel="noopener">File page</a>`;
+  document.getElementById('creditLabel').innerHTML = `Credit: ${current.credit} · <a href="${current.sourcePage}" target="_blank" rel="noopener">Google マップで見る</a>`;
   document.getElementById('resultOverlay').style.display = 'grid';
 
-  // ボタン状態
   setButtons({ startDisabled: true, guessDisabled: true, nextDisabled: false });
   document.getElementById('nextBtn').textContent = round === ROUNDS ? 'ゲーム終了 ▶' : '次のラウンド ▶';
 }
@@ -382,9 +499,14 @@ function resetGame() {
   ROUNDS = ROUNDS_PER_GAME;
   order = [];
   updateHud();
-  if (viewer) {
-    viewer.destroy();
-    viewer = null;
+  if (streetViewPanorama) {
+    try {
+      streetViewPanorama.setVisible(false);
+    } catch (err) {
+      console.warn('Street View ビューアのリセット中にエラー:', err);
+    }
+    document.getElementById('pano').innerHTML = '';
+    streetViewPanorama = null;
   }
   if (guessMarker) {
     map.removeLayer(guessMarker);
@@ -405,10 +527,22 @@ function resetGame() {
 }
 
 // ========= イベント =========
-document.getElementById('startBtn').addEventListener('click', startGame);
+document.getElementById('startBtn').addEventListener('click', () => {
+  startGame();
+});
+
 document.getElementById('guessBtn').addEventListener('click', makeGuess);
-document.getElementById('nextBtn').addEventListener('click', nextRound);
+
+document.getElementById('nextBtn').addEventListener('click', () => {
+  nextRound().catch((err) => {
+    console.error('ラウンドの読み込みに失敗:', err);
+    alert(err.message || 'ストリートビューの読み込みに失敗しました。APIキーや利用制限を確認してください。');
+    setButtons({ startDisabled: true, guessDisabled: true, nextDisabled: false });
+  });
+});
+
 document.getElementById('resetBtn').addEventListener('click', resetGame);
+
 document.getElementById('closeResult').addEventListener('click', () => {
   document.getElementById('resultOverlay').style.display = 'none';
 });
