@@ -1,11 +1,89 @@
 // ========= 設定 =========
 const ROUNDS_PER_GAME = 3; // 1ゲームで抽選するラウンド数
-const TARGET_POOL_SIZE = 10; // 候補数：10
+const TARGET_POOL_SIZE = 10; // 候補数：10（Google Street View 利用時）
 
 const KEY_STORAGE_KEY = 'gsv_api_key';
 const STREET_VIEW_METADATA_ENDPOINT = 'https://maps.googleapis.com/maps/api/streetview/metadata';
 const STREET_VIEW_SEARCH_RADIUS = 50000; // m
 const MAX_METADATA_ATTEMPTS = TARGET_POOL_SIZE * 60;
+
+// Google Street View を使わない場合のオープンデータ 360° 画像
+const OPEN_PANORAMAS = [
+  {
+    id: 'alma_observatory',
+    name: 'ALMA Observatory — San Pedro de Atacama, Chile',
+    lat: -23.0293,
+    lng: -67.7535,
+    panoramaUrl: 'https://pannellum.org/images/alma.jpg',
+    credit: 'ESO / Babak Tafreshi (CC BY 4.0)',
+    sourcePage: 'https://www.eso.org/public/images/potw1340a/'
+  },
+  {
+    id: 'cerro_toco_summit',
+    name: 'Cerro Toco Summit — Antofagasta Region, Chile',
+    lat: -22.9459,
+    lng: -67.7733,
+    panoramaUrl: 'https://pannellum.org/images/cerro-toco-0.jpg',
+    credit: 'Petr Brož (CC BY-SA 4.0)',
+    sourcePage: 'https://commons.wikimedia.org/wiki/File:Cerro_Toco_Atacama_Desert_360_Panorama.jpg'
+  },
+  {
+    id: 'cerro_toco_ridge',
+    name: 'Cerro Toco Ridge — Antofagasta Region, Chile',
+    lat: -22.9494,
+    lng: -67.7817,
+    panoramaUrl: 'https://pannellum.org/images/cerro-toco-1.jpg',
+    credit: 'Petr Brož (CC BY-SA 4.0)',
+    sourcePage: 'https://commons.wikimedia.org/wiki/File:Cerro_Toco_Atacama_Desert_360_Panorama_2.jpg'
+  },
+  {
+    id: 'valle_de_la_luna',
+    name: 'Valle de la Luna — San Pedro de Atacama, Chile',
+    lat: -22.9605,
+    lng: -67.7839,
+    panoramaUrl: 'https://pannellum.org/images/cerro-toco-2.jpg',
+    credit: 'Petr Brož (CC BY-SA 4.0)',
+    sourcePage: 'https://commons.wikimedia.org/wiki/File:Atacama_Desert_Moon_Valley_360_Panorama.jpg'
+  },
+  {
+    id: 'sechelt_inlet',
+    name: 'Sechelt Inlet — British Columbia, Canada',
+    lat: 49.545,
+    lng: -123.763,
+    panoramaUrl: 'https://storage.googleapis.com/vrview/examples/pano.jpg',
+    credit: '© Google — Sechelt Inlet',
+    sourcePage: 'https://developers.google.com/vr/data' 
+  },
+  {
+    id: 'great_barrier_reef',
+    name: 'Great Barrier Reef — Queensland, Australia',
+    lat: -18.2871,
+    lng: 147.6992,
+    panoramaUrl: 'https://storage.googleapis.com/vrview/examples/coral.jpg',
+    credit: '© Google — Great Barrier Reef',
+    sourcePage: 'https://developers.google.com/vr/data'
+  },
+  {
+    id: 'fremont_factory',
+    name: 'Tesla Factory — Fremont, California, USA',
+    lat: 37.4946,
+    lng: -121.9446,
+    panoramaUrl: 'https://storage.googleapis.com/vrview/examples/tesla/gearvr-pano.jpg',
+    credit: '© Tesla / Google',
+    sourcePage: 'https://developers.google.com/vr/data'
+  },
+  {
+    id: 'mountain_lake',
+    name: 'Mountain Lake — Banff National Park, Canada',
+    lat: 51.4156,
+    lng: -116.2126,
+    panoramaUrl: 'https://storage.googleapis.com/vrview/examples/mountain.jpg',
+    credit: '© Google — Mountain Lake',
+    sourcePage: 'https://developers.google.com/vr/data'
+  }
+];
+
+const OPEN_PANORAMA_POOL_SIZE = OPEN_PANORAMAS.length;
 
 // ストリートビューの探索用に、世界中の都市圏をいくつかサンプリング
 const STREET_VIEW_SAMPLE_ZONES = [
@@ -32,6 +110,7 @@ let answerMarker = null;
 let line = null;
 let streetViewPanorama = null;
 let googleMapsLoadPromise = null;
+let photoSphereViewer = null;
 
 let googleMapsApiKey = (window.GOOGLE_MAPS_API_KEY || '').trim();
 if (!googleMapsApiKey) {
@@ -56,12 +135,18 @@ let current = null;
 let hasGuessed = false;
 let selectedLatLng = null;
 
+function getTargetPoolSize() {
+  const fallback = Math.min(TARGET_POOL_SIZE, OPEN_PANORAMA_POOL_SIZE);
+  return googleMapsApiKey ? TARGET_POOL_SIZE : fallback;
+}
+
 // ========= 初期化 =========
 boot();
 
 function boot() {
   initUI();
   initMap();
+  updateViewerHint(googleMapsApiKey ? 'google' : 'photosphere');
   setButtons({ startDisabled: false, guessDisabled: true, nextDisabled: true });
   updateHud();
 }
@@ -70,7 +155,7 @@ function initUI() {
   const roundsInput = document.getElementById('roundsInput');
   roundsInput.value = ROUNDS_PER_GAME;
   roundsInput.disabled = true;
-  document.getElementById('poolLabel').textContent = `0 / ${TARGET_POOL_SIZE}`;
+  document.getElementById('poolLabel').textContent = `0 / ${getTargetPoolSize()}`;
   document.getElementById('roundLabel').textContent = `0 / ${ROUNDS_PER_GAME}`;
   document.getElementById('scoreLabel').textContent = '0';
 
@@ -122,19 +207,22 @@ function setApiKey(newKey) {
   if (!trimmed) {
     googleMapsLoadPromise = null;
   }
+  POOL = [];
   updateApiKeyUI();
+  updateHud();
+  updateViewerHint(trimmed ? 'google' : 'photosphere');
 }
 
 function handleApiKeySave() {
   const input = document.getElementById('apiKeyInput');
   const value = input.value.trim();
   if (!value) {
-    alert('Google Maps Platform の API キーを入力してください。');
-    input.focus();
+    setApiKey('');
+    alert('APIキーを未設定にしました。内蔵の 360° 画像のみでプレイします。');
     return;
   }
   setApiKey(value);
-  alert('APIキーを保存しました。');
+  alert('Google Street View を利用するための API キーを保存しました。');
 }
 
 function handleApiKeyClear() {
@@ -148,7 +236,7 @@ function updateApiKeyUI() {
   const input = document.getElementById('apiKeyInput');
   if (!input) return;
   input.value = googleMapsApiKey;
-  input.placeholder = googleMapsApiKey ? '設定済み（変更可）' : 'Google Maps API Key';
+  input.placeholder = googleMapsApiKey ? '設定済み（変更可）' : 'Google Maps API Key (任意)';
 }
 
 // ========= Google Maps 読み込み =========
@@ -189,30 +277,85 @@ function loadGoogleMapsScript(key) {
   });
 }
 
-async function initViewer(panoId) {
-  await ensureGoogleMapsReady();
-  if (!document.getElementById('pano')) {
-    throw new Error('ストリートビューを表示する要素が見つかりません。');
+async function initViewer(scene) {
+  const panoContainer = document.getElementById('pano');
+  if (!panoContainer) {
+    throw new Error('ビューアを表示する要素が見つかりません。');
   }
-  if (!streetViewPanorama) {
-    streetViewPanorama = new google.maps.StreetViewPanorama(document.getElementById('pano'), {
-      pano: panoId,
-      pov: { heading: 0, pitch: 0 },
-      zoom: 1,
-      visible: true,
-      addressControl: false,
-      fullscreenControl: true,
-      motionTrackingControl: false,
-      linksControl: true,
-      zoomControl: true,
-      scrollwheel: true
-    });
+  if (!scene) {
+    throw new Error('表示する候補が取得できませんでした。');
+  }
+
+  if (scene.type === 'google') {
+    if (photoSphereViewer) {
+      try {
+        photoSphereViewer.destroy();
+      } catch (err) {
+        console.warn('Photo Sphere Viewer の破棄に失敗:', err);
+      }
+      photoSphereViewer = null;
+      panoContainer.innerHTML = '';
+    }
+
+    await ensureGoogleMapsReady();
+    if (!scene.panoId) {
+      throw new Error('Street View パノラマ ID が取得できませんでした。');
+    }
+
+    if (!streetViewPanorama) {
+      streetViewPanorama = new google.maps.StreetViewPanorama(panoContainer, {
+        pano: scene.panoId,
+        pov: { heading: 0, pitch: 0 },
+        zoom: 1,
+        visible: true,
+        addressControl: false,
+        fullscreenControl: true,
+        motionTrackingControl: false,
+        linksControl: true,
+        zoomControl: true,
+        scrollwheel: true
+      });
+    } else {
+      streetViewPanorama.setPano(scene.panoId);
+    }
+    streetViewPanorama.setPov({ heading: 0, pitch: 0 });
+    streetViewPanorama.setZoom(1);
+    streetViewPanorama.setVisible(true);
+  } else if (scene.type === 'photosphere') {
+    if (streetViewPanorama) {
+      try {
+        streetViewPanorama.setVisible(false);
+      } catch (err) {
+        console.warn('Street View ビューアの非表示化に失敗:', err);
+      }
+      streetViewPanorama = null;
+      panoContainer.innerHTML = '';
+    }
+    if (!window.PhotoSphereViewer?.Viewer) {
+      throw new Error('Photo Sphere Viewer の読み込みに失敗しました。');
+    }
+    if (!scene.panoramaUrl) {
+      throw new Error('360° 画像の URL が指定されていません。');
+    }
+
+    if (!photoSphereViewer) {
+      photoSphereViewer = new PhotoSphereViewer.Viewer({
+        container: panoContainer,
+        panorama: scene.panoramaUrl,
+        defaultYaw: '0deg',
+        touchmoveTwoFingers: true,
+        mousewheelCtrlKey: false,
+        navbar: ['zoom', 'fullscreen'],
+        loadingTxt: '読み込み中…'
+      });
+    } else {
+      await photoSphereViewer.setPanorama(scene.panoramaUrl, { showLoader: true });
+    }
   } else {
-    streetViewPanorama.setPano(panoId);
+    throw new Error('サポートされていないビューアタイプです。');
   }
-  streetViewPanorama.setPov({ heading: 0, pitch: 0 });
-  streetViewPanorama.setZoom(1);
-  streetViewPanorama.setVisible(true);
+
+  updateViewerHint(scene.type);
 }
 
 // ========= ユーティリティ =========
@@ -252,13 +395,23 @@ function shuffle(arr) {
 function updateHud() {
   document.getElementById('roundLabel').textContent = `${round} / ${ROUNDS}`;
   document.getElementById('scoreLabel').textContent = `${score}`;
-  document.getElementById('poolLabel').textContent = `${POOL.length} / ${TARGET_POOL_SIZE}`;
+  document.getElementById('poolLabel').textContent = `${POOL.length} / ${getTargetPoolSize()}`;
 }
 
 function setButtons({ startDisabled, guessDisabled, nextDisabled }) {
   document.getElementById('startBtn').disabled = startDisabled ?? false;
   document.getElementById('guessBtn').disabled = guessDisabled ?? true;
   document.getElementById('nextBtn').disabled = nextDisabled ?? true;
+}
+
+function updateViewerHint(type) {
+  const panel = document.querySelector('.panel');
+  if (!panel) return;
+  if (type === 'google') {
+    panel.textContent = 'Google ストリートビュー：ドラッグで見回す／スクロールでズーム';
+  } else {
+    panel.textContent = '360°ビュー：ドラッグで見回す／スクロールでズーム';
+  }
 }
 
 // ========= Google Street View から候補を作る =========
@@ -348,6 +501,7 @@ async function loadStreetViewPanoramas(targetCount = TARGET_POOL_SIZE, onProgres
     usedPanos.add(panoId);
     selected.push({
       id: `gsv_${panoId}`,
+      type: 'google',
       name: location.name,
       lat: location.lat,
       lng: location.lng,
@@ -362,28 +516,70 @@ async function loadStreetViewPanoramas(targetCount = TARGET_POOL_SIZE, onProgres
   return selected;
 }
 
+async function loadOpenPanoramas(targetCount = getTargetPoolSize(), onProgress = () => {}) {
+  const poolSize = Math.min(targetCount, OPEN_PANORAMA_POOL_SIZE);
+  const shuffled = shuffle([...OPEN_PANORAMAS]);
+  const selected = shuffled.slice(0, poolSize).map((item) => ({
+    id: `open_${item.id}`,
+    type: 'photosphere',
+    name: item.name,
+    lat: item.lat,
+    lng: item.lng,
+    credit: item.credit,
+    sourcePage: item.sourcePage,
+    panoId: null,
+    panoramaUrl: item.panoramaUrl
+  }));
+
+  selected.forEach((_, index) => {
+    onProgress(index + 1, poolSize, index + 1);
+  });
+
+  return selected;
+}
+
 async function ensurePool() {
-  if (POOL.length >= TARGET_POOL_SIZE) return;
+  if (POOL.length >= getTargetPoolSize()) return;
 
   const overlay = document.getElementById('loadingOverlay');
   const bar = document.getElementById('loadingBar');
   const text = document.getElementById('loadingText');
+  const title = document.getElementById('loadingTitle');
+  const note = document.getElementById('loadingNote');
   overlay.style.display = 'grid';
   bar.style.width = '0%';
   text.textContent = '候補を探索中…';
 
   try {
-    if (!googleMapsApiKey) {
-      throw new Error('Google Maps Platform の API キーが設定されていません。');
-    }
+    const targetCount = getTargetPoolSize();
+    let results = [];
 
-    const results = await loadStreetViewPanoramas(TARGET_POOL_SIZE, (ok, target, attempts) => {
-      bar.style.width = `${Math.round((ok / target) * 100)}%`;
-      text.textContent = `抽出 ${ok} / ${target}　(試行:${attempts})`;
-    });
-
-    if (results.length < TARGET_POOL_SIZE) {
-      throw new Error('十分な Street View パノラマを見つけられませんでした。');
+    if (googleMapsApiKey) {
+      if (title) title.textContent = 'Google Street View から候補を収集中…';
+      if (note) {
+        note.textContent = '※ 利用には Google Maps Platform の API キーが必要です';
+        note.style.display = '';
+      }
+      results = await loadStreetViewPanoramas(targetCount, (ok, target, attempts) => {
+        bar.style.width = `${Math.round((ok / target) * 100)}%`;
+        text.textContent = `抽出 ${ok} / ${target}　(試行:${attempts})`;
+      });
+      if (results.length < targetCount) {
+        throw new Error('十分な Street View パノラマを見つけられませんでした。');
+      }
+    } else {
+      if (title) title.textContent = 'オープンデータの 360° 画像から候補を準備中…';
+      if (note) {
+        note.textContent = '※ APIキーなしで遊べるサンプル画像セットを使用します';
+        note.style.display = '';
+      }
+      results = await loadOpenPanoramas(targetCount, (ok, target) => {
+        bar.style.width = `${Math.round((ok / target) * 100)}%`;
+        text.textContent = `読み込み ${ok} / ${target}`;
+      });
+      if (results.length < targetCount) {
+        throw new Error('十分な 360° 画像候補を用意できませんでした。');
+      }
     }
 
     POOL = shuffle(results);
@@ -402,7 +598,7 @@ async function startGame() {
     await ensurePool();
   } catch (err) {
     console.error('候補の準備に失敗:', err);
-    alert(err.message || 'Street View から候補を取得できませんでした。APIキーや利用制限を確認してください。');
+    alert(err.message || '候補の取得に失敗しました。ネットワーク状況や API キー設定を確認してください。');
     setButtons({ startDisabled: false, guessDisabled: true, nextDisabled: true });
     return;
   }
@@ -417,7 +613,7 @@ async function startGame() {
     await nextRound();
   } catch (err) {
     console.error('最初のラウンドの開始に失敗:', err);
-    alert(err.message || 'ストリートビューの読み込みに失敗しました。APIキーや利用制限を確認してください。');
+    alert(err.message || 'パノラマの読み込みに失敗しました。ネットワーク状況や API キー設定を確認してください。');
     setButtons({ startDisabled: false, guessDisabled: true, nextDisabled: true });
   }
 }
@@ -450,7 +646,7 @@ async function nextRound() {
   current = order[round - 1];
 
   try {
-    await initViewer(current.panoId);
+    await initViewer(current);
   } catch (err) {
     round -= 1;
     current = null;
@@ -485,7 +681,14 @@ function makeGuess() {
   document.getElementById('pointsLabel').textContent = pts.toString();
   const nameLine = current.name.length > 120 ? `${current.name.slice(0, 117)}…` : current.name;
   document.getElementById('answerLabel').innerHTML = `${nameLine}`;
-  document.getElementById('creditLabel').innerHTML = `Credit: ${current.credit} · <a href="${current.sourcePage}" target="_blank" rel="noopener">Google マップで見る</a>`;
+  const creditLabel = document.getElementById('creditLabel');
+  if (creditLabel) {
+    const linkLabel = current.type === 'google' ? 'Google マップで見る' : 'ソースを開く';
+    const linkPart = current.sourcePage
+      ? ` · <a href="${current.sourcePage}" target="_blank" rel="noopener">${linkLabel}</a>`
+      : '';
+    creditLabel.innerHTML = `Credit: ${current.credit}${linkPart}`;
+  }
   document.getElementById('resultOverlay').style.display = 'grid';
 
   setButtons({ startDisabled: true, guessDisabled: true, nextDisabled: false });
@@ -499,14 +702,25 @@ function resetGame() {
   ROUNDS = ROUNDS_PER_GAME;
   order = [];
   updateHud();
+  const panoContainer = document.getElementById('pano');
   if (streetViewPanorama) {
     try {
       streetViewPanorama.setVisible(false);
     } catch (err) {
       console.warn('Street View ビューアのリセット中にエラー:', err);
     }
-    document.getElementById('pano').innerHTML = '';
     streetViewPanorama = null;
+  }
+  if (photoSphereViewer) {
+    try {
+      photoSphereViewer.destroy();
+    } catch (err) {
+      console.warn('Photo Sphere Viewer のリセット中にエラー:', err);
+    }
+    photoSphereViewer = null;
+  }
+  if (panoContainer) {
+    panoContainer.innerHTML = '';
   }
   if (guessMarker) {
     map.removeLayer(guessMarker);
@@ -524,6 +738,7 @@ function resetGame() {
   setButtons({ startDisabled: false, guessDisabled: true, nextDisabled: true });
   document.getElementById('resultOverlay').style.display = 'none';
   document.getElementById('roundLabel').textContent = `0 / ${ROUNDS_PER_GAME}`;
+  updateViewerHint(googleMapsApiKey ? 'google' : 'photosphere');
 }
 
 // ========= イベント =========
@@ -536,7 +751,7 @@ document.getElementById('guessBtn').addEventListener('click', makeGuess);
 document.getElementById('nextBtn').addEventListener('click', () => {
   nextRound().catch((err) => {
     console.error('ラウンドの読み込みに失敗:', err);
-    alert(err.message || 'ストリートビューの読み込みに失敗しました。APIキーや利用制限を確認してください。');
+    alert(err.message || 'パノラマの読み込みに失敗しました。ネットワーク状況や API キー設定を確認してください。');
     setButtons({ startDisabled: true, guessDisabled: true, nextDisabled: false });
   });
 });

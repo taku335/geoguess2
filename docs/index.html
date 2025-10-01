@@ -11,6 +11,12 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
           integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 
+  <!-- Photo Sphere Viewer (APIキー不要の 360° ビューア) -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/photo-sphere-viewer@4.2.0/dist/photo-sphere-viewer.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/uevent@2.0.0/browser.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.137.5/build/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/photo-sphere-viewer@4.2.0/dist/photo-sphere-viewer.min.js"></script>
+
   <script>
     try {
       window.GOOGLE_MAPS_API_KEY = localStorage.getItem('gsv_api_key') || '';
@@ -35,7 +41,7 @@
         <button id="startBtn" class="btn">ゲーム開始</button>
       </div>
       <div class="pref-group api-key-group">
-        APIキー:
+        Google APIキー (任意):
         <input id="apiKeyInput" type="password" placeholder="Google Maps API Key" autocomplete="off" />
         <button id="apiKeySave" class="btn secondary small">保存</button>
         <button id="apiKeyClear" class="btn warn small">クリア</button>
@@ -46,7 +52,7 @@
   <div class="layout">
     <div style="position: relative;">
       <div id="pano"></div>
-      <div class="panel">ストリートビュー：ドラッグで見回す／スクロールでズーム</div>
+      <div class="panel">360°ビュー：ドラッグで見回す／スクロールでズーム</div>
       <div class="controls">
         <button id="guessBtn" class="btn success" disabled>この場所にする！</button>
         <button id="nextBtn"  class="btn secondary" disabled>次のラウンド ▶</button>
@@ -73,11 +79,11 @@
       <!-- ローディング -->
       <div class="overlay" id="loadingOverlay" aria-hidden="true">
         <div class="card">
-          <h3>Google Street View から候補を収集中…</h3>
+          <h3 id="loadingTitle">候補を準備中…</h3>
           <div class="loadingbar" style="margin: 8px 0 10px;"><div id="loadingBar"></div></div>
           <div id="loadingText" style="color: var(--sub);">準備中</div>
-          <div style="margin-top:10px; color: var(--sub); font-size: 12px;">
-            ※ 利用には Google Maps Platform の API キーが必要です
+          <div id="loadingNote" style="margin-top:10px; color: var(--sub); font-size: 12px;">
+            ※ APIキーなしで遊べるサンプル画像セットを使用します
           </div>
         </div>
       </div>
