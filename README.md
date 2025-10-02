@@ -34,7 +34,10 @@
 - 主要ファイル
   - `docs/index.html`: 画面構造と外部リソースの読み込み
   - `docs/style.css`: レイアウトやテーマカラーを定義したスタイルシート
-  - `docs/app.js`: ゲームロジックと Street View メタデータ取得処理
+  - `src/app.ts`: ゲームロジックと Street View メタデータ取得処理（TypeScript）
+  - `src/quiz.ts`: クイズページのインタラクション（TypeScript）
+  - `docs/app.js` / `docs/quiz.js`: ビルド済みの JavaScript（`npm run build` で再生成）
+- 開発時は `npm install` で依存関係を導入し、`npm run build` で TypeScript をコンパイルしたうえで `dist/` に静的ファイルを出力します。GitHub Pages へのデプロイやローカルサーバー実行時は `dist/` 内のファイルを配信してください。
 - Leaflet は CDN から読み込んでいます。オフライン対応が必要な場合はローカルにホストするか、バンドルしてください。
 - Google Maps JavaScript API は動的に読み込みます。API キーは `localStorage` に保存され、`window.GOOGLE_MAPS_API_KEY` にも反映されます。API キーが未設定の場合は Photo Sphere Viewer を使ってオープンデータの 360° 画像を表示します。
 - API キー未設定時に表示する 360° 画像は、Wikimedia Commons や ESO などの公開リポジトリからランタイムに取得した CC ライセンス素材 (JPEG のみ) を使用します。PNG 形式は利用しません。
