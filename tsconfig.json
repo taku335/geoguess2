@@ -1,0 +1,17 @@
+{
+  // Visit https://aka.ms/tsconfig to read more about this file
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": "docs",
+    "target": "es2019",
+    "module": "es2015",
+    "lib": ["dom", "es2019"],
+    "strict": true,
+    "skipLibCheck": true,
+    "moduleResolution": "node",
+    "noEmitOnError": true,
+    "removeComments": false
+  },
+  "include": ["src/**/*"],
+  "exclude": ["docs/**/*"]
+}

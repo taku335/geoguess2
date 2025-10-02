@@ -1,0 +1,16 @@
+{
+  "name": "geoguess2",
+  "version": "1.0.0",
+  "description": "ブラウザで遊べるミニ GeoGuessr 風ゲームです。Google Street View から取得した 360° パノラマをもとに、表示された場所がどこかを世界地図上で推測してスコアを競います。PC やスマートフォンなど様々なデバイスで快適に遊べるよう UI を調整しています。",
+  "scripts": {
+    "clean": "rm -rf dist",
+    "compile": "tsc",
+    "build": "npm run compile && rm -rf dist && mkdir -p dist && cp -R docs/. dist/"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "typescript": "^5.9.2"
+  }
+}
