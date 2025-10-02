@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GeoGuessrまとめWiki クイズ</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="quiz-body">
+  <header>
+    <div class="brand-area">
+      <div class="brand">🌍 Mini GeoGuessr-like</div>
+      <nav class="nav-links" aria-label="サブページ">
+        <a class="nav-link" href="index.html">トップに戻る</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="quiz-container">
+    <h1>GeoGuessrまとめWiki クイズ</h1>
+    <p class="quiz-intro">
+      GeoGuessrまとめWiki（<a href="https://wikiwiki.jp/geoguessr/" target="_blank" rel="noopener">https://wikiwiki.jp/geoguessr/</a>）の
+      内容を復習できるミニクイズです。Wikiを見ながらでもOKなので、解きながらGeoGuessrの知識をチェックしてみましょう！
+    </p>
+    <div id="quiz" class="quiz-questions" aria-live="polite"></div>
+    <div class="quiz-actions">
+      <button id="submitQuiz" class="btn success" type="button">結果を見る</button>
+      <button id="retryQuiz" class="btn secondary" type="button">リセット</button>
+    </div>
+    <div id="quizResult" class="quiz-result" role="status"></div>
+    <div id="quizExplanations" class="quiz-explanations" aria-live="polite"></div>
+  </main>
+
+  <script src="quiz.js"></script>
+</body>
+</html>
