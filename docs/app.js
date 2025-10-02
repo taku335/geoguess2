@@ -119,6 +119,10 @@ function querySelector(root, selector) {
     return root.querySelector(selector);
 }
 // ========= ゲーム状態 =========
+const INITIAL_MAP_VIEW = {
+    center: { lat: 20, lng: 0 },
+    zoom: 2
+};
 let map = null;
 let guessMarker = null;
 let answerMarker = null;
@@ -179,7 +183,7 @@ function initUI() {
     });
 }
 function initMap() {
-    map = L.map('map', { worldCopyJump: true, attributionControl: true }).setView([20, 0], 2);
+    map = L.map('map', { worldCopyJump: true, attributionControl: true }).setView([INITIAL_MAP_VIEW.center.lat, INITIAL_MAP_VIEW.center.lng], INITIAL_MAP_VIEW.zoom);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap contributors'
@@ -395,6 +399,39 @@ function updateHud() {
     getElementById('roundLabel').textContent = `${round} / ${ROUNDS}`;
     getElementById('scoreLabel').textContent = `${score}`;
     getElementById('poolLabel').textContent = `${POOL.length} / ${getTargetPoolSize()}`;
+}
+function resetMapView() {
+    if (!map)
+        return;
+    map.setView([INITIAL_MAP_VIEW.center.lat, INITIAL_MAP_VIEW.center.lng], INITIAL_MAP_VIEW.zoom);
+}
+function clearMapArtifacts() {
+    if (!map) {
+        guessMarker = null;
+        answerMarker = null;
+        line = null;
+        return;
+    }
+    if (guessMarker) {
+        map.removeLayer(guessMarker);
+        guessMarker = null;
+    }
+    if (answerMarker) {
+        map.removeLayer(answerMarker);
+        answerMarker = null;
+    }
+    if (line) {
+        map.removeLayer(line);
+        line = null;
+    }
+}
+function hideResultOverlay() {
+    getElementById('resultOverlay').style.display = 'none';
+}
+function resetRoundView() {
+    clearMapArtifacts();
+    resetMapView();
+    hideResultOverlay();
 }
 function setButtons({ startDisabled, guessDisabled, nextDisabled }) {
     getElementById('startBtn').disabled = startDisabled !== null && startDisabled !== void 0 ? startDisabled : false;
@@ -660,20 +697,7 @@ async function nextRound() {
     var _a;
     hasGuessed = false;
     selectedLatLng = null;
-    if (guessMarker) {
-        map.removeLayer(guessMarker);
-        guessMarker = null;
-    }
-    if (answerMarker) {
-        map.removeLayer(answerMarker);
-        answerMarker = null;
-    }
-    if (line) {
-        map.removeLayer(line);
-        line = null;
-    }
-    map.setView([20, 0], 2);
-    getElementById('resultOverlay').style.display = 'none';
+    resetRoundView();
     if (round >= ROUNDS) {
         alert(`ゲーム終了！ 総得点: ${score} pt`);
         setButtons({ startDisabled: false, guessDisabled: true, nextDisabled: true });
@@ -756,21 +780,8 @@ function resetGame() {
         photoSphereViewer = null;
     }
     panoContainer.innerHTML = '';
-    if (guessMarker) {
-        map.removeLayer(guessMarker);
-        guessMarker = null;
-    }
-    if (answerMarker) {
-        map.removeLayer(answerMarker);
-        answerMarker = null;
-    }
-    if (line) {
-        map.removeLayer(line);
-        line = null;
-    }
-    map.setView([20, 0], 2);
+    resetRoundView();
     setButtons({ startDisabled: false, guessDisabled: true, nextDisabled: true });
-    getElementById('resultOverlay').style.display = 'none';
     getElementById('roundLabel').textContent = `0 / ${ROUNDS_PER_GAME}`;
     updateViewerHint(googleMapsApiKey ? 'google' : 'photosphere');
 }
@@ -790,8 +801,6 @@ getElementById('nextBtn').addEventListener('click', () => {
     });
 });
 getElementById('resetBtn').addEventListener('click', resetGame);
-getElementById('closeResult').addEventListener('click', () => {
-    getElementById('resultOverlay').style.display = 'none';
-});
+getElementById('closeResult').addEventListener('click', hideResultOverlay);
 setButtons({ startDisabled: false, guessDisabled: true, nextDisabled: true });
 updateHud();

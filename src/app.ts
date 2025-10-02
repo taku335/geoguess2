@@ -187,6 +187,11 @@ function querySelector<T extends Element>(root: ParentNode, selector: string): T
 }
 
 // ========= ゲーム状態 =========
+const INITIAL_MAP_VIEW: { center: LatLngLiteral; zoom: number } = {
+  center: { lat: 20, lng: 0 },
+  zoom: 2
+};
+
 let map: any = null;
 let guessMarker: any = null;
 let answerMarker: any = null;
@@ -256,7 +261,10 @@ function initUI(): void {
 }
 
 function initMap(): void {
-  map = L.map('map', { worldCopyJump: true, attributionControl: true }).setView([20, 0], 2);
+  map = L.map('map', { worldCopyJump: true, attributionControl: true }).setView(
+    [INITIAL_MAP_VIEW.center.lat, INITIAL_MAP_VIEW.center.lng],
+    INITIAL_MAP_VIEW.zoom
+  );
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19,
     attribution: '&copy; OpenStreetMap contributors'
@@ -476,6 +484,42 @@ function updateHud(): void {
   getElementById<HTMLSpanElement>('roundLabel').textContent = `${round} / ${ROUNDS}`;
   getElementById<HTMLSpanElement>('scoreLabel').textContent = `${score}`;
   getElementById<HTMLSpanElement>('poolLabel').textContent = `${POOL.length} / ${getTargetPoolSize()}`;
+}
+
+function resetMapView(): void {
+  if (!map) return;
+  map.setView([INITIAL_MAP_VIEW.center.lat, INITIAL_MAP_VIEW.center.lng], INITIAL_MAP_VIEW.zoom);
+}
+
+function clearMapArtifacts(): void {
+  if (!map) {
+    guessMarker = null;
+    answerMarker = null;
+    line = null;
+    return;
+  }
+  if (guessMarker) {
+    map.removeLayer(guessMarker);
+    guessMarker = null;
+  }
+  if (answerMarker) {
+    map.removeLayer(answerMarker);
+    answerMarker = null;
+  }
+  if (line) {
+    map.removeLayer(line);
+    line = null;
+  }
+}
+
+function hideResultOverlay(): void {
+  getElementById<HTMLDivElement>('resultOverlay').style.display = 'none';
+}
+
+function resetRoundView(): void {
+  clearMapArtifacts();
+  resetMapView();
+  hideResultOverlay();
 }
 
 function setButtons({
@@ -773,21 +817,7 @@ async function startGame(): Promise<void> {
 async function nextRound(): Promise<void> {
   hasGuessed = false;
   selectedLatLng = null;
-  if (guessMarker) {
-    map.removeLayer(guessMarker);
-    guessMarker = null;
-  }
-  if (answerMarker) {
-    map.removeLayer(answerMarker);
-    answerMarker = null;
-  }
-  if (line) {
-    map.removeLayer(line);
-    line = null;
-  }
-  map.setView([20, 0], 2);
-
-  getElementById<HTMLDivElement>('resultOverlay').style.display = 'none';
+  resetRoundView();
 
   if (round >= ROUNDS) {
     alert(`ゲーム終了！ 総得点: ${score} pt`);
@@ -877,21 +907,8 @@ function resetGame(): void {
     photoSphereViewer = null;
   }
   panoContainer.innerHTML = '';
-  if (guessMarker) {
-    map.removeLayer(guessMarker);
-    guessMarker = null;
-  }
-  if (answerMarker) {
-    map.removeLayer(answerMarker);
-    answerMarker = null;
-  }
-  if (line) {
-    map.removeLayer(line);
-    line = null;
-  }
-  map.setView([20, 0], 2);
+  resetRoundView();
   setButtons({ startDisabled: false, guessDisabled: true, nextDisabled: true });
-  getElementById<HTMLDivElement>('resultOverlay').style.display = 'none';
   getElementById<HTMLSpanElement>('roundLabel').textContent = `0 / ${ROUNDS_PER_GAME}`;
   updateViewerHint(googleMapsApiKey ? 'google' : 'photosphere');
 }
@@ -916,9 +933,7 @@ getElementById<HTMLButtonElement>('nextBtn').addEventListener('click', () => {
 
 getElementById<HTMLButtonElement>('resetBtn').addEventListener('click', resetGame);
 
-getElementById<HTMLButtonElement>('closeResult').addEventListener('click', () => {
-  getElementById<HTMLDivElement>('resultOverlay').style.display = 'none';
-});
+getElementById<HTMLButtonElement>('closeResult').addEventListener('click', hideResultOverlay);
 
 setButtons({ startDisabled: false, guessDisabled: true, nextDisabled: true });
 updateHud();
