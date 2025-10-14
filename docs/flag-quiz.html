@@ -17,20 +17,64 @@
     </div>
   </header>
 
-  <main class="quiz-container">
-    <h1>国旗当てクイズ</h1>
-    <p class="quiz-intro">
-      世界中の国旗からランダムに10問出題される4択クイズです。1問ずつ表示される国旗に答えて、最後に結果をまとめて確認しましょう。
-    </p>
-    <div id="flagQuizProgress" class="quiz-progress" aria-live="polite"></div>
-    <div id="flagQuizMessage" class="quiz-message" aria-live="assertive"></div>
-    <div id="flagQuiz" class="quiz-questions" aria-live="polite"></div>
-    <div class="quiz-actions">
-      <button id="submitFlagQuiz" class="btn success" type="button">回答する</button>
-      <button id="retryFlagQuiz" class="btn secondary" type="button">リセット</button>
+  <main class="quiz-main">
+    <div class="quiz-layout">
+      <aside id="flagQuizMenu" class="quiz-menu" aria-label="クイズメニュー">
+        <h1>国旗当てクイズ</h1>
+        <p class="quiz-intro">
+          遊びたいモードを選んでからスタートできます。地域別クイズではリストの割り当て例に加えて、「中東・中央アジア編」など細分化した提案セットも用意しました。
+        </p>
+
+        <section class="quiz-menu-section">
+          <h2 class="quiz-menu-heading">基本メニュー</h2>
+          <div class="quiz-menu-grid">
+            <button class="quiz-menu-button" type="button" data-flag-preset="global-10">10問連続クイズ（全世界）</button>
+            <button class="quiz-menu-button" type="button" data-flag-preset="global-5">5問連続クイズ（全世界）</button>
+          </div>
+        </section>
+
+        <section class="quiz-menu-section">
+          <h2 class="quiz-menu-heading">地域別クイズ（各5問）</h2>
+          <div class="quiz-menu-grid">
+            <button class="quiz-menu-button" type="button" data-flag-preset="asia-5">アジア編</button>
+            <button class="quiz-menu-button" type="button" data-flag-preset="oceania-5">オセアニア編</button>
+            <button class="quiz-menu-button" type="button" data-flag-preset="europe-5">ヨーロッパ編</button>
+            <button class="quiz-menu-button" type="button" data-flag-preset="africa-5">アフリカ編</button>
+            <button class="quiz-menu-button" type="button" data-flag-preset="americas-5">南北アメリカ編</button>
+            <button class="quiz-menu-button" type="button" data-flag-preset="middle-central-5">中東・中央アジア編（提案）</button>
+            <button class="quiz-menu-button" type="button" data-flag-preset="others-5">その他（小さな国と島国）</button>
+          </div>
+          <p class="quiz-menu-note">アジアの広さを考慮して中東・中央アジア編も選べるようにしました。</p>
+        </section>
+
+        <section class="quiz-menu-section">
+          <h2 class="quiz-menu-heading">テーマ別チャレンジ</h2>
+          <div class="quiz-menu-grid">
+            <button class="quiz-menu-button" type="button" data-flag-preset="similar">似ている国旗クイズ</button>
+            <button class="quiz-menu-button" type="button" data-flag-preset="unrecognised">国連未承認・未加盟編</button>
+          </div>
+        </section>
+      </aside>
+
+      <section class="quiz-panel" aria-label="クイズ出題エリア">
+        <div class="quiz-panel-header">
+          <div id="flagQuizPresetLabel" class="quiz-preset-label" aria-live="polite"></div>
+          <p id="flagQuizDescription" class="quiz-description"></p>
+          <div id="flagQuizProgress" class="quiz-progress" aria-live="polite"></div>
+          <div id="flagQuizMessage" class="quiz-message" aria-live="assertive"></div>
+        </div>
+
+        <div id="flagQuiz" class="quiz-questions" aria-live="polite"></div>
+
+        <div class="quiz-actions">
+          <button id="submitFlagQuiz" class="btn success" type="button">回答する</button>
+          <button id="retryFlagQuiz" class="btn secondary" type="button">リセット</button>
+        </div>
+
+        <div id="flagQuizResult" class="quiz-result" role="status"></div>
+        <div id="flagQuizExplanations" class="quiz-explanations" aria-live="polite"></div>
+      </section>
     </div>
-    <div id="flagQuizResult" class="quiz-result" role="status"></div>
-    <div id="flagQuizExplanations" class="quiz-explanations" aria-live="polite"></div>
   </main>
 
   <script src="flag-quiz.js"></script>
