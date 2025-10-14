@@ -343,6 +343,23 @@ header {
   margin-bottom: clamp(20px, 4vw, 28px);
 }
 
+.quiz-progress {
+  margin-bottom: 12px;
+  font-weight: 600;
+  color: var(--sub);
+}
+
+.quiz-message {
+  margin-bottom: 12px;
+  font-size: 14px;
+  color: var(--sub);
+  min-height: 1.2em;
+}
+
+.quiz-message.is-error {
+  color: #ffadad;
+}
+
 .quiz-question + .quiz-question {
   margin-top: clamp(24px, 5vw, 32px);
 }
