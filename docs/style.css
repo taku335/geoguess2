@@ -352,6 +352,10 @@ header {
   margin: 0 0 12px;
 }
 
+.flag-question h2 {
+  margin-bottom: 10px;
+}
+
 .quiz-options {
   display: grid;
   gap: 10px;
@@ -395,6 +399,39 @@ header {
 
 .quiz-option span {
   font-size: 15px;
+}
+
+.flag-display {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: clamp(64px, 18vw, 120px);
+  border-radius: 16px;
+  padding: clamp(16px, 4vw, 28px);
+  background: rgba(15, 21, 48, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  margin-bottom: clamp(10px, 3vw, 16px);
+}
+
+.flag-emoji {
+  line-height: 1;
+}
+
+.flag-question .quiz-options {
+  margin-top: clamp(12px, 3vw, 18px);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .quiz-actions {
