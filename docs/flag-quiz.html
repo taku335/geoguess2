@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>国旗クイズ — Mini GeoGuessr-like</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="quiz-body flag-quiz-body">
+  <header>
+    <div class="brand-area">
+      <div class="brand">🌍 Mini GeoGuessr-like</div>
+      <nav class="nav-links" aria-label="サブページ">
+        <a class="nav-link" href="index.html">トップに戻る</a>
+        <a class="nav-link" href="quiz.html">GeoGuessr Wiki クイズ</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="quiz-container">
+    <h1>国旗当てクイズ</h1>
+    <p class="quiz-intro">
+      世界の国旗を見て国名を当てる3択クイズです。見た目の特徴や色の配置に注目して挑戦してみましょう！
+      迷ったらヒントになる説明も確認できます。
+    </p>
+    <div id="flagQuiz" class="quiz-questions" aria-live="polite"></div>
+    <div class="quiz-actions">
+      <button id="submitFlagQuiz" class="btn success" type="button">結果を見る</button>
+      <button id="retryFlagQuiz" class="btn secondary" type="button">リセット</button>
+    </div>
+    <div id="flagQuizResult" class="quiz-result" role="status"></div>
+    <div id="flagQuizExplanations" class="quiz-explanations" aria-live="polite"></div>
+  </main>
+
+  <script src="flag-quiz.js"></script>
+</body>
+</html>
