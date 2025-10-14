@@ -1,5 +1,4 @@
 "use strict";
-const TOTAL_FLAG_QUESTIONS = 10;
 const OPTIONS_PER_FLAG_QUESTION = 4;
 const COUNTRY_FLAGS = [
     { name: 'アフガニスタン', flag: '🇦🇫' },
@@ -197,6 +196,306 @@ const COUNTRY_FLAGS = [
     { name: 'ザンビア', flag: '🇿🇲' },
     { name: 'ジンバブエ', flag: '🇿🇼' }
 ];
+const EXTRA_COUNTRY_FLAGS = [
+    { name: '台湾', flag: '🇹🇼' },
+    { name: 'コソボ', flag: '🇽🇰' },
+    { name: 'パレスチナ', flag: '🇵🇸' },
+    { name: '西サハラ', flag: '🇪🇭' },
+    { name: 'クック諸島', flag: '🇨🇰' },
+    { name: 'ニウエ', flag: '🇳🇺' }
+];
+const ALL_COUNTRY_FLAGS = [...COUNTRY_FLAGS, ...EXTRA_COUNTRY_FLAGS];
+const COUNTRY_FLAG_MAP = new Map(ALL_COUNTRY_FLAGS.map((country) => [country.name, country]));
+function getFlagByName(name) {
+    const flag = COUNTRY_FLAG_MAP.get(name);
+    if (!flag) {
+        throw new Error(`Flag data for "${name}" is not defined.`);
+    }
+    return flag;
+}
+function pickFlags(names) {
+    return names.map((name) => getFlagByName(name));
+}
+const ASIA_FLAGS = pickFlags([
+    '日本',
+    '中国',
+    '韓国',
+    '北朝鮮',
+    'モンゴル',
+    '台湾',
+    'インド',
+    'インドネシア',
+    'タイ',
+    'ベトナム',
+    'マレーシア',
+    'シンガポール',
+    'フィリピン',
+    'ラオス',
+    'カンボジア',
+    'ミャンマー'
+]);
+const OCEANIA_FLAGS = pickFlags([
+    'オーストラリア',
+    'ニュージーランド',
+    'フィジー',
+    'パプアニューギニア',
+    'ソロモン諸島',
+    'バヌアツ',
+    'サモア',
+    'トンガ',
+    'キリバス',
+    'ツバル',
+    'ナウル',
+    'マーシャル諸島',
+    'ミクロネシア連邦',
+    'パラオ'
+]);
+const EUROPE_FLAGS = pickFlags([
+    'イギリス',
+    'アイルランド',
+    'フランス',
+    'ドイツ',
+    'イタリア',
+    'スペイン',
+    'ポルトガル',
+    'オランダ',
+    'ベルギー',
+    'スイス',
+    'オーストリア',
+    'スウェーデン',
+    'ノルウェー',
+    'デンマーク',
+    'フィンランド',
+    'ポーランド',
+    'チェコ',
+    'ハンガリー',
+    'スロバキア',
+    'ギリシャ',
+    'ルーマニア',
+    'ブルガリア',
+    'クロアチア',
+    'セルビア'
+]);
+const AFRICA_FLAGS = pickFlags([
+    'エジプト',
+    'エチオピア',
+    'ケニア',
+    'タンザニア',
+    'ウガンダ',
+    '南アフリカ共和国',
+    'ナミビア',
+    'ボツワナ',
+    'ジンバブエ',
+    'モザンビーク',
+    'ガーナ',
+    'セネガル',
+    'ナイジェリア',
+    'モロッコ',
+    'アルジェリア',
+    'チュニジア',
+    'マリ',
+    'ブルキナファソ',
+    'コートジボワール',
+    'カメルーン'
+]);
+const AMERICAS_FLAGS = pickFlags([
+    'アメリカ合衆国',
+    'カナダ',
+    'メキシコ',
+    'グアテマラ',
+    'コスタリカ',
+    'パナマ',
+    'キューバ',
+    'ドミニカ共和国',
+    'ハイチ',
+    'ジャマイカ',
+    'ブラジル',
+    'アルゼンチン',
+    'チリ',
+    'ペルー',
+    'ボリビア',
+    'パラグアイ',
+    'ウルグアイ',
+    'コロンビア',
+    'ベネズエラ',
+    'エクアドル'
+]);
+const MIDDLE_CENTRAL_ASIA_FLAGS = pickFlags([
+    'サウジアラビア',
+    'アラブ首長国連邦',
+    'カタール',
+    'バーレーン',
+    'クウェート',
+    'オマーン',
+    'イエメン',
+    'イラン',
+    'イラク',
+    'シリア',
+    'ヨルダン',
+    'レバノン',
+    'イスラエル',
+    'トルコ',
+    'ジョージア',
+    'アルメニア',
+    'アゼルバイジャン',
+    'カザフスタン',
+    'ウズベキスタン',
+    'キルギス',
+    'タジキスタン'
+]);
+const SMALL_STATE_FLAGS = pickFlags([
+    'アイスランド',
+    'リヒテンシュタイン',
+    'ルクセンブルク',
+    'モナコ',
+    'サンマリノ',
+    'バチカン市国',
+    'アンドラ',
+    'マルタ',
+    'セーシェル',
+    'モーリシャス',
+    'モルディブ',
+    'バルバドス',
+    'バハマ',
+    'キプロス',
+    'カーボベルデ'
+]);
+const SIMILAR_FLAG_QUESTIONS = [
+    {
+        answer: getFlagByName('ルーマニア'),
+        options: pickFlags(['ルーマニア', 'チャド', 'モルドバ', 'アンドラ'])
+    },
+    {
+        answer: getFlagByName('アイルランド'),
+        options: pickFlags(['アイルランド', 'コートジボワール', 'イタリア', 'インド'])
+    },
+    {
+        answer: getFlagByName('インドネシア'),
+        options: pickFlags(['インドネシア', 'モナコ', 'ポーランド', 'シンガポール'])
+    },
+    {
+        answer: getFlagByName('カタール'),
+        options: pickFlags(['カタール', 'バーレーン', 'オーストリア', 'ラトビア'])
+    },
+    {
+        answer: getFlagByName('ノルウェー'),
+        options: pickFlags(['ノルウェー', 'アイスランド', 'デンマーク', 'スウェーデン'])
+    },
+    {
+        answer: getFlagByName('オーストラリア'),
+        options: pickFlags(['オーストラリア', 'ニュージーランド', 'フィジー', 'イギリス'])
+    }
+];
+const UN_RECOGNISED_QUESTIONS = [
+    {
+        answer: getFlagByName('台湾'),
+        options: pickFlags(['台湾', '中国', '日本', 'シンガポール'])
+    },
+    {
+        answer: getFlagByName('コソボ'),
+        options: pickFlags(['コソボ', 'セルビア', 'アルバニア', 'ボスニア・ヘルツェゴビナ'])
+    },
+    {
+        answer: getFlagByName('パレスチナ'),
+        options: pickFlags(['パレスチナ', 'ヨルダン', 'スーダン', 'クウェート'])
+    },
+    {
+        answer: getFlagByName('西サハラ'),
+        options: pickFlags(['西サハラ', 'モロッコ', 'アルジェリア', 'モーリタニア'])
+    },
+    {
+        answer: getFlagByName('クック諸島'),
+        options: pickFlags(['クック諸島', 'ニュージーランド', 'オーストラリア', 'フィジー'])
+    }
+];
+const FLAG_QUIZ_PRESETS = [
+    {
+        id: 'global-10',
+        label: '10問連続クイズ（全世界）',
+        description: '世界195か国の中から10問をランダム出題します。',
+        questionCount: 10,
+        pool: COUNTRY_FLAGS,
+        optionsPool: COUNTRY_FLAGS
+    },
+    {
+        id: 'global-5',
+        label: '5問連続クイズ（全世界）',
+        description: '短時間で挑戦できる全世界版の5問クイズです。',
+        questionCount: 5,
+        pool: COUNTRY_FLAGS,
+        optionsPool: COUNTRY_FLAGS
+    },
+    {
+        id: 'asia-5',
+        label: '地域別（アジア編）',
+        description: '東アジアから東南アジアまで幅広くカバーしました。',
+        questionCount: 5,
+        pool: ASIA_FLAGS,
+        optionsPool: ASIA_FLAGS
+    },
+    {
+        id: 'oceania-5',
+        label: '地域別（オセアニア編）',
+        description: 'オセアニアの島国を中心に5問出題します。',
+        questionCount: 5,
+        pool: OCEANIA_FLAGS,
+        optionsPool: OCEANIA_FLAGS
+    },
+    {
+        id: 'europe-5',
+        label: '地域別（ヨーロッパ編）',
+        description: 'EU諸国から北欧・東欧まで広くセレクトしました。',
+        questionCount: 5,
+        pool: EUROPE_FLAGS,
+        optionsPool: EUROPE_FLAGS
+    },
+    {
+        id: 'africa-5',
+        label: '地域別（アフリカ編）',
+        description: 'アフリカ各地の国旗を覚える練習にぴったりです。',
+        questionCount: 5,
+        pool: AFRICA_FLAGS,
+        optionsPool: AFRICA_FLAGS
+    },
+    {
+        id: 'americas-5',
+        label: '地域別（南北アメリカ編）',
+        description: '北米・中米・南米の代表的な国旗を取り揃えました。',
+        questionCount: 5,
+        pool: AMERICAS_FLAGS,
+        optionsPool: AMERICAS_FLAGS
+    },
+    {
+        id: 'middle-central-5',
+        label: '地域別（中東・中央アジア編）',
+        description: 'アジア編を細分化したおすすめセットです。',
+        questionCount: 5,
+        pool: MIDDLE_CENTRAL_ASIA_FLAGS,
+        optionsPool: MIDDLE_CENTRAL_ASIA_FLAGS
+    },
+    {
+        id: 'others-5',
+        label: '地域別（その他・小さな国編）',
+        description: 'ミニ国家や島国を中心にしたバラエティセットです。',
+        questionCount: 5,
+        pool: SMALL_STATE_FLAGS,
+        optionsPool: SMALL_STATE_FLAGS
+    },
+    {
+        id: 'similar',
+        label: '似ている国旗クイズ',
+        description: '色や模様が似ている国旗だけで構成した実戦向けセットです。',
+        questionCount: SIMILAR_FLAG_QUESTIONS.length,
+        customQuestions: SIMILAR_FLAG_QUESTIONS
+    },
+    {
+        id: 'unrecognised',
+        label: '国連未承認・未加盟編',
+        description: '国連で完全承認されていない地域の国旗に挑戦しましょう。',
+        questionCount: UN_RECOGNISED_QUESTIONS.length,
+        customQuestions: UN_RECOGNISED_QUESTIONS
+    }
+];
 const flagQuizElement = document.getElementById('flagQuiz');
 const submitFlagQuizButton = document.getElementById('submitFlagQuiz');
 const retryFlagQuizButton = document.getElementById('retryFlagQuiz');
@@ -204,12 +503,24 @@ const flagResultElement = document.getElementById('flagQuizResult');
 const flagExplanationsElement = document.getElementById('flagQuizExplanations');
 const flagProgressElement = document.getElementById('flagQuizProgress');
 const flagStatusElement = document.getElementById('flagQuizMessage');
-if (!flagQuizElement || !flagResultElement || !flagExplanationsElement) {
+const flagPresetLabelElement = document.getElementById('flagQuizPresetLabel');
+const flagDescriptionElement = document.getElementById('flagQuizDescription');
+const flagMenuElement = document.getElementById('flagQuizMenu');
+const flagPresetButtons = flagMenuElement
+    ? Array.from(flagMenuElement.querySelectorAll('[data-flag-preset]'))
+    : [];
+if (!flagQuizElement ||
+    !flagResultElement ||
+    !flagExplanationsElement ||
+    !flagMenuElement ||
+    !flagPresetLabelElement ||
+    !flagDescriptionElement) {
     throw new Error('Flag quiz page is missing required elements.');
 }
 const flagQuizRoot = flagQuizElement;
 const flagResultBox = flagResultElement;
 const flagExplanationsBox = flagExplanationsElement;
+let activePreset = FLAG_QUIZ_PRESETS[0];
 let flagQuizQuestions = [];
 let currentFlagQuestionIndex = 0;
 const flagUserSelections = [];
@@ -221,19 +532,40 @@ function shuffleArray(source) {
     }
     return array;
 }
-function createFlagQuizQuestions() {
-    const selectedCountries = shuffleArray(COUNTRY_FLAGS).slice(0, TOTAL_FLAG_QUESTIONS);
+function createFlagQuizQuestions(preset) {
+    var _a, _b;
+    if (preset.customQuestions && preset.customQuestions.length > 0) {
+        const questionSpecs = shuffleArray(preset.customQuestions).slice(0, Math.min(preset.questionCount, preset.customQuestions.length));
+        return questionSpecs.map((spec, index) => {
+            const optionMap = new Map();
+            spec.options.forEach((option) => optionMap.set(option.name, option));
+            optionMap.set(spec.answer.name, spec.answer);
+            const options = shuffleArray(Array.from(optionMap.values()));
+            const correctIndex = options.findIndex((item) => item.name === spec.answer.name);
+            return {
+                id: `flag-question-${preset.id}-${index + 1}`,
+                country: spec.answer,
+                options,
+                correctIndex
+            };
+        });
+    }
+    const pool = (_a = preset.pool) !== null && _a !== void 0 ? _a : COUNTRY_FLAGS;
+    const availableOptions = (_b = preset.optionsPool) !== null && _b !== void 0 ? _b : ALL_COUNTRY_FLAGS;
+    const questionCount = Math.min(preset.questionCount, pool.length);
+    const selectedCountries = shuffleArray(pool).slice(0, questionCount);
     return selectedCountries.map((country, index) => {
         const optionMap = new Map();
         optionMap.set(country.name, country);
-        while (optionMap.size < OPTIONS_PER_FLAG_QUESTION) {
-            const candidate = COUNTRY_FLAGS[Math.floor(Math.random() * COUNTRY_FLAGS.length)];
+        const requiredOptions = Math.min(OPTIONS_PER_FLAG_QUESTION, availableOptions.length);
+        while (optionMap.size < requiredOptions) {
+            const candidate = availableOptions[Math.floor(Math.random() * availableOptions.length)];
             optionMap.set(candidate.name, candidate);
         }
         const options = shuffleArray(Array.from(optionMap.values()));
         const correctIndex = options.findIndex((item) => item.name === country.name);
         return {
-            id: `flag-question-${index + 1}`,
+            id: `flag-question-${preset.id}-${index + 1}`,
             country,
             options,
             correctIndex
@@ -242,6 +574,10 @@ function createFlagQuizQuestions() {
 }
 function updateFlagProgress() {
     if (!flagProgressElement) {
+        return;
+    }
+    if (flagQuizQuestions.length === 0) {
+        flagProgressElement.textContent = '出題準備中';
         return;
     }
     if (currentFlagQuestionIndex < flagQuizQuestions.length) {
@@ -263,13 +599,65 @@ function showFlagStatus(message, isError = false) {
         flagStatusElement.classList.remove('is-error');
     }
 }
+function updatePresetSummary() {
+    if (flagPresetLabelElement) {
+        flagPresetLabelElement.textContent = `現在のセット：${activePreset.label}`;
+    }
+    if (flagDescriptionElement) {
+        flagDescriptionElement.textContent = activePreset.description;
+    }
+}
+function updateMenuActiveState() {
+    flagPresetButtons.forEach((button) => {
+        const isActive = button.dataset.flagPreset === activePreset.id;
+        button.classList.toggle('is-active', isActive);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+}
+function rebuildFlagQuiz() {
+    flagQuizQuestions = createFlagQuizQuestions(activePreset);
+    currentFlagQuestionIndex = 0;
+    flagUserSelections.length = 0;
+    flagResultBox.textContent = '';
+    flagExplanationsBox.innerHTML = '';
+    updatePresetSummary();
+    if (flagQuizQuestions.length === 0) {
+        flagQuizRoot.innerHTML = '<p class="quiz-empty">このプリセットには問題が登録されていません。</p>';
+        showFlagStatus('問題が登録されていないプリセットです。別のメニューを選んでください。', true);
+        updateFlagProgress();
+        if (submitFlagQuizButton) {
+            submitFlagQuizButton.disabled = true;
+        }
+        return;
+    }
+    showFlagStatus(`${activePreset.label}を開始します。${flagQuizQuestions.length}問の4択クイズです。国旗をよく見て答えを選びましょう！`);
+    renderCurrentFlagQuestion();
+}
+function setActivePreset(preset) {
+    activePreset = preset;
+    updateMenuActiveState();
+    rebuildFlagQuiz();
+}
+function setActivePresetById(presetId) {
+    const preset = FLAG_QUIZ_PRESETS.find((item) => item.id === presetId);
+    if (preset) {
+        setActivePreset(preset);
+    }
+}
 function renderCurrentFlagQuestion() {
     const question = flagQuizQuestions[currentFlagQuestionIndex];
     flagQuizRoot.innerHTML = '';
+    if (!question) {
+        if (submitFlagQuizButton) {
+            submitFlagQuizButton.disabled = true;
+        }
+        updateFlagProgress();
+        return;
+    }
     const section = document.createElement('section');
     section.className = 'quiz-question flag-question';
     const heading = document.createElement('h2');
-    heading.textContent = `Q${currentFlagQuestionIndex + 1}. この国旗はどこの国？`;
+    heading.textContent = `Q${currentFlagQuestionIndex + 1}. この国旗は？`;
     section.appendChild(heading);
     const flagDisplay = document.createElement('div');
     flagDisplay.className = 'flag-display';
@@ -347,7 +735,7 @@ function showFlagFinalResults() {
         }
         return total + (selectedIndex === question.correctIndex ? 1 : 0);
     }, 0);
-    flagResultBox.textContent = `結果：${correctCount} / ${flagQuizQuestions.length}問 正解`;
+    flagResultBox.textContent = `${activePreset.label}：${correctCount} / ${flagQuizQuestions.length}問 正解`;
     flagQuizQuestions.forEach((question, index) => {
         const explanation = document.createElement('div');
         explanation.className = 'quiz-explanation';
@@ -366,20 +754,19 @@ function showFlagFinalResults() {
         flagExplanationsBox.appendChild(explanation);
     });
     updateFlagProgress();
-    showFlagStatus('お疲れさまでした！結果を確認して、もう一度挑戦してみましょう。');
+    showFlagStatus('お疲れさまでした！結果を確認して、同じセットや別のセットにも挑戦してみましょう。');
     if (submitFlagQuizButton) {
         submitFlagQuizButton.disabled = true;
     }
 }
-function resetFlagQuiz() {
-    flagQuizQuestions = createFlagQuizQuestions();
-    currentFlagQuestionIndex = 0;
-    flagUserSelections.length = 0;
-    flagResultBox.textContent = '';
-    flagExplanationsBox.innerHTML = '';
-    showFlagStatus('世界中の国旗からランダムに10問を出題します。がんばってください！');
-    renderCurrentFlagQuestion();
-}
-resetFlagQuiz();
+setActivePreset(activePreset);
+flagPresetButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+        const presetId = button.dataset.flagPreset;
+        if (presetId) {
+            setActivePresetById(presetId);
+        }
+    });
+});
 submitFlagQuizButton === null || submitFlagQuizButton === void 0 ? void 0 : submitFlagQuizButton.addEventListener('click', handleFlagAnswerSubmission);
-retryFlagQuizButton === null || retryFlagQuizButton === void 0 ? void 0 : retryFlagQuizButton.addEventListener('click', resetFlagQuiz);
+retryFlagQuizButton === null || retryFlagQuizButton === void 0 ? void 0 : retryFlagQuizButton.addEventListener('click', rebuildFlagQuiz);
