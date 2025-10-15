@@ -656,6 +656,19 @@ header {
   line-height: 1.5;
 }
 
+.quiz-explanation-summary {
+  margin: 0 0 6px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.flag-trivia {
+  margin: 0;
+  font-size: 12px;
+  color: var(--sub);
+  line-height: 1.6;
+}
+
 @media (max-width: 960px) {
   header {
     grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
