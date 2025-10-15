@@ -453,6 +453,70 @@ const UN_RECOGNISED_QUESTIONS: FlagQuizQuestionSpec[] = [
   }
 ];
 
+const FLAG_REGION_LABELS = new Map<string, string>();
+
+function registerFlagRegion(flags: CountryFlag[], label: string) {
+  flags.forEach((country) => {
+    if (!FLAG_REGION_LABELS.has(country.name)) {
+      FLAG_REGION_LABELS.set(country.name, label);
+    }
+  });
+}
+
+registerFlagRegion(ASIA_FLAGS, 'アジア');
+registerFlagRegion(OCEANIA_FLAGS, 'オセアニア');
+registerFlagRegion(EUROPE_FLAGS, 'ヨーロッパ');
+registerFlagRegion(AFRICA_FLAGS, 'アフリカ');
+registerFlagRegion(AMERICAS_FLAGS, '南北アメリカ');
+registerFlagRegion(MIDDLE_CENTRAL_ASIA_FLAGS, '中東・中央アジア');
+registerFlagRegion(SMALL_STATE_FLAGS, '小さな国や島国');
+
+const FLAG_TRIVIA = new Map<string, string>(Object.entries({
+  日本: '白地に赤い円を配した日の丸は、太陽を象徴するシンプルながらも印象的なデザインです。',
+  中国: '赤地に五つの星が描かれた五星紅旗は、中国共産党と人民の団結を表しています。',
+  アメリカ合衆国: '星条旗の星は州の数、縞は独立当初の13植民地を表しています。',
+  イギリス: 'ユニオンジャックは、イングランド・スコットランド・アイルランドの旗を重ね合わせたものです。',
+  フランス: 'トリコロールの青・白・赤は自由・平等・博愛の理念を象徴しています。',
+  ドイツ: '黒・赤・金の3色は、19世紀の自由主義運動を起源とする伝統的な配色です。',
+  イタリア: '緑・白・赤の三色旗は、統一運動リソルジメントの象徴として広まりました。',
+  スペイン: '中央の紋章にはスペイン王国を構成する歴史的諸王国の紋章が描かれています。',
+  ポルトガル: '旗の中央に描かれた航海球は、大航海時代の海洋国家としての歴史を示しています。',
+  ブラジル: '緑と黄色は皇帝家の色、青い円内の星は独立宣言時の星空を表現しています。',
+  メキシコ: '中央の鷲が蛇をくわえる紋章は、アステカ伝説に登場する建国の地を象徴します。',
+  カナダ: 'メープルリーフ旗は、赤いカエデの葉がカナダの自然と団結を象徴しています。',
+  オーストラリア: '左上のユニオンジャックと南十字星が英国との歴史と南半球を表します。',
+  ニュージーランド: '南十字星の赤い星が南半球の夜空を、ユニオンジャックが英国とのつながりを示します。',
+  インド: '中央のチャクラ（法輪）は24本のスポークを持ち、進歩と正義を意味します。',
+  韓国: '太極旗は陰陽の太極と四隅の卦で宇宙の調和を表現しています。',
+  ロシア: '白・青・赤の三色は旧モスクワ公国の色に由来し、スラヴ諸国にも影響を与えました。',
+  ウクライナ: '青と黄の二色旗は、青い空と黄金の小麦畑というウクライナの風景を表現しています。',
+  スイス: '正方形の赤地に白い十字は、中世から続くスイス連邦軍の紋章を引き継いでいます。',
+  スウェーデン: '青地に黄色の北欧十字は、王家ヴァーサ家の紋章色をもとにしています。',
+  ノルウェー: 'ノルウェー旗の赤・白・青はフランス革命の自由の理念を象徴し、北欧十字で地域の一体感を示します。',
+  フィンランド: '白地に青い北欧十字は、雪と湖に覆われたフィンランドの自然を表しています。',
+  デンマーク: '世界最古とされるダンネブロ旗は、13世紀の戦いで天から降ったと伝えられます。',
+  ベルギー: '黒・黄・赤の3色は、ベルギー独立時の国章の色から採用されました。',
+  オランダ: 'オランダ国旗は17世紀のネーデルラント独立戦争を象徴するオレンジ・白・青が原型です。',
+  南アフリカ共和国: '多彩な6色は、多民族国家の融和と未来への希望を表現しています。',
+  ナイジェリア: '緑・白・緑の縦三色は農業の豊かさと平和への願いを示します。',
+  ケニア: '黒・赤・緑の帯と中央の盾と槍は、独立闘争と伝統文化を象徴します。',
+  アルゼンチン: '中央の「五月の太陽」は独立運動の象徴であるインカの太陽神インティに由来します。',
+  チリ: '「星の旗」と呼ばれ、白はアンデスの雪、青は空、赤は独立の犠牲を意味します。',
+  ペルー: '赤は独立の戦い、白は平和を表し、中央の国章は豊かな自然資源を象徴します。'
+}));
+
+function getFlagTrivia(name: string, flagEmoji: string) {
+  const fact = FLAG_TRIVIA.get(name);
+  if (fact) {
+    return fact;
+  }
+  const region = FLAG_REGION_LABELS.get(name);
+  if (region) {
+    return `${flagEmoji} ${name}は${region}に属する国の国旗です。色や紋章の意味も調べてみましょう。`;
+  }
+  return `${flagEmoji} ${name}の国旗については、由来や歴史を調べるとさらに理解が深まります。`;
+}
+
 const FLAG_QUIZ_PRESETS: FlagQuizPreset[] = [
   {
     id: 'global-10',
@@ -467,6 +531,14 @@ const FLAG_QUIZ_PRESETS: FlagQuizPreset[] = [
     label: '5問連続クイズ（全世界）',
     description: '短時間で挑戦できる全世界版の5問クイズです。',
     questionCount: 5,
+    pool: COUNTRY_FLAGS,
+    optionsPool: COUNTRY_FLAGS
+  },
+  {
+    id: 'single-shot',
+    label: '一問一答（全世界）',
+    description: 'ランダムに1問だけ出題するスキマ時間向けモードです。',
+    questionCount: 1,
     pool: COUNTRY_FLAGS,
     optionsPool: COUNTRY_FLAGS
   },
@@ -851,14 +923,22 @@ function showFlagFinalResults(): void {
     const userChoice = typeof selectedIndex === 'number' ? question.options[selectedIndex] : undefined;
     const correctChoice = question.options[question.correctIndex];
 
+    const summary = document.createElement('p');
+    summary.className = 'quiz-explanation-summary';
     if (!userChoice) {
-      explanation.textContent = `Q${index + 1}: ${question.country.flag} ${question.country.name} — 未回答`;
+      summary.textContent = `Q${index + 1}: ${question.country.flag} ${question.country.name} — 未回答`;
     } else if (selectedIndex === question.correctIndex) {
-      explanation.textContent = `Q${index + 1}: ${question.country.flag} ${question.country.name} — あなたの回答：${userChoice.name}（正解）`;
+      summary.textContent = `Q${index + 1}: ${question.country.flag} ${question.country.name} — あなたの回答：${userChoice.name}（正解）`;
     } else {
-      explanation.textContent = `Q${index + 1}: ${question.country.flag} ${question.country.name} — あなたの回答：${userChoice.name}（不正解） / 正解：${correctChoice.name}`;
+      summary.textContent = `Q${index + 1}: ${question.country.flag} ${question.country.name} — あなたの回答：${userChoice.name}（不正解） / 正解：${correctChoice.name}`;
     }
 
+    const trivia = document.createElement('p');
+    trivia.className = 'flag-trivia';
+    trivia.textContent = `ミニ蘊蓄：${getFlagTrivia(question.country.name, question.country.flag)}`;
+
+    explanation.appendChild(summary);
+    explanation.appendChild(trivia);
     flagExplanationsBox.appendChild(explanation);
   });
 
