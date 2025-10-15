@@ -741,6 +741,9 @@ function renderCurrentFlagQuestion(): void {
   heading.textContent = `Q${currentFlagQuestionIndex + 1}. この国旗は？`;
   section.appendChild(heading);
 
+  const questionBody = document.createElement('div');
+  questionBody.className = 'flag-question-body';
+
   const flagDisplay = document.createElement('div');
   flagDisplay.className = 'flag-display';
   flagDisplay.setAttribute('role', 'img');
@@ -755,8 +758,6 @@ function renderCurrentFlagQuestion(): void {
   srText.className = 'sr-only';
   srText.textContent = `${question.country.name}の国旗`;
   flagDisplay.appendChild(srText);
-
-  section.appendChild(flagDisplay);
 
   const optionsContainer = document.createElement('div');
   optionsContainer.className = 'quiz-options';
@@ -781,7 +782,10 @@ function renderCurrentFlagQuestion(): void {
     optionsContainer.appendChild(label);
   });
 
-  section.appendChild(optionsContainer);
+  questionBody.appendChild(flagDisplay);
+  questionBody.appendChild(optionsContainer);
+
+  section.appendChild(questionBody);
   flagQuizRoot.appendChild(section);
 
   updateFlagProgress();
