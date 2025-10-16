@@ -666,6 +666,33 @@ function showFlagStatus(message, isError = false) {
         flagStatusElement.classList.remove('is-error');
     }
 }
+function renderFlagAnswerFeedback(question, selectedIndex) {
+    if (!flagStatusElement) {
+        return;
+    }
+    const correctChoice = question.options[question.correctIndex];
+    const userChoice = question.options[selectedIndex];
+    const isCorrect = selectedIndex === question.correctIndex;
+    flagStatusElement.classList.toggle('is-error', !isCorrect);
+    flagStatusElement.innerHTML = '';
+    const list = document.createElement('ul');
+    list.className = 'flag-feedback';
+    const statusItem = document.createElement('li');
+    statusItem.className = `flag-feedback-status ${isCorrect ? 'is-correct' : 'is-incorrect'}`;
+    statusItem.textContent = isCorrect ? '◯ 正解' : '× 不正解';
+    list.appendChild(statusItem);
+    const correctItem = document.createElement('li');
+    correctItem.className = 'flag-feedback-answer';
+    correctItem.textContent = `正しい答え：${correctChoice.flag} ${correctChoice.name}`;
+    list.appendChild(correctItem);
+    if (!isCorrect && userChoice) {
+        const userItem = document.createElement('li');
+        userItem.className = 'flag-feedback-user-answer';
+        userItem.textContent = `あなたの回答：${userChoice.flag} ${userChoice.name}`;
+        list.appendChild(userItem);
+    }
+    flagStatusElement.appendChild(list);
+}
 function updatePresetSummary() {
     if (flagPresetLabelElement) {
         flagPresetLabelElement.textContent = `現在のセット：${activePreset.label}`;
@@ -778,14 +805,7 @@ function handleFlagAnswerSubmission() {
     }
     const selectedIndex = Number(selected.value);
     flagUserSelections[currentFlagQuestionIndex] = selectedIndex;
-    const isCorrect = selectedIndex === question.correctIndex;
-    const correctOption = question.options[question.correctIndex];
-    if (isCorrect) {
-        showFlagStatus(`正解です！${correctOption.flag} ${correctOption.name}`);
-    }
-    else {
-        showFlagStatus(`残念！正解は ${correctOption.flag} ${correctOption.name} です。`);
-    }
+    renderFlagAnswerFeedback(question, selectedIndex);
     currentFlagQuestionIndex += 1;
     if (currentFlagQuestionIndex < flagQuizQuestions.length) {
         renderCurrentFlagQuestion();
@@ -812,6 +832,22 @@ function showFlagFinalResults() {
         const selectedIndex = flagUserSelections[index];
         const userChoice = typeof selectedIndex === 'number' ? question.options[selectedIndex] : undefined;
         const correctChoice = question.options[question.correctIndex];
+        const card = document.createElement('div');
+        card.className = 'flag-result-card';
+        const flagDisplay = document.createElement('div');
+        flagDisplay.className = 'flag-display flag-result-display';
+        flagDisplay.setAttribute('role', 'img');
+        flagDisplay.setAttribute('aria-label', `${question.country.name}の国旗`);
+        const flagSpan = document.createElement('span');
+        flagSpan.className = 'flag-emoji';
+        flagSpan.textContent = question.country.flag;
+        flagDisplay.appendChild(flagSpan);
+        const srText = document.createElement('span');
+        srText.className = 'sr-only';
+        srText.textContent = `${question.country.name}の国旗`;
+        flagDisplay.appendChild(srText);
+        const details = document.createElement('div');
+        details.className = 'flag-result-details';
         const summary = document.createElement('p');
         summary.className = 'quiz-explanation-summary';
         if (!userChoice) {
@@ -826,8 +862,11 @@ function showFlagFinalResults() {
         const trivia = document.createElement('p');
         trivia.className = 'flag-trivia';
         trivia.textContent = `ミニ蘊蓄：${getFlagTrivia(question.country.name, question.country.flag)}`;
-        explanation.appendChild(summary);
-        explanation.appendChild(trivia);
+        details.appendChild(summary);
+        details.appendChild(trivia);
+        card.appendChild(flagDisplay);
+        card.appendChild(details);
+        explanation.appendChild(card);
         flagExplanationsBox.appendChild(explanation);
     });
     updateFlagProgress();
