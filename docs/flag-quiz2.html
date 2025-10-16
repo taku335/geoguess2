@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>国旗当てクイズ2 — Mini GeoGuessr-like</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="quiz-body flag-quiz2-body">
+  <header>
+    <div class="brand-area">
+      <div class="brand">🌍 Mini GeoGuessr-like</div>
+      <nav class="nav-links" aria-label="サブページ">
+        <a class="nav-link" href="index.html">トップに戻る</a>
+        <a class="nav-link" href="quiz.html">GeoGuessr Wiki クイズ</a>
+        <a class="nav-link" href="flag-quiz.html">国旗クイズ</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="flag-quiz2-main">
+    <section class="flag-quiz2-panel" aria-label="国旗当てクイズ2">
+      <header class="flag-quiz2-header">
+        <h1>国旗当てクイズ2</h1>
+        <p class="flag-quiz2-description">
+          表示された10個の国旗から、気になる国旗をタップまたはクリックしてみましょう。
+          押している間だけ国名が表示されます。更新ボタンでセットを入れ替えられます。
+        </p>
+        <button id="refreshFlagQuiz2" class="btn secondary" type="button">更新</button>
+      </header>
+
+      <div id="flagQuiz2Grid" class="flag-hold-grid" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <script type="module" src="flag-quiz2.js"></script>
+</body>
+</html>
