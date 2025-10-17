@@ -600,13 +600,29 @@ header {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: clamp(56px, 14vw, 96px);
+  width: min(100%, clamp(180px, 40vw, 320px));
+  aspect-ratio: 4 / 3;
   border-radius: 14px;
-  padding: clamp(14px, 3.2vw, 22px);
+  padding: clamp(12px, 3vw, 20px);
   background: rgba(15, 21, 48, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.12);
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.04);
   margin-bottom: clamp(10px, 2.4vw, 14px);
+}
+
+.flag-display .flag-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.18);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.flag-display--fallback {
+  width: auto;
+  min-width: clamp(180px, 40vw, 320px);
+  aspect-ratio: auto;
 }
 
 .flag-question .flag-display {
@@ -616,14 +632,14 @@ header {
 
 .flag-result-card {
   display: grid;
-  grid-template-columns: minmax(120px, 160px) minmax(0, 1fr);
+  grid-template-columns: minmax(140px, 200px) minmax(0, 1fr);
   gap: 12px;
   align-items: center;
 }
 
 .flag-result-display {
   margin-bottom: 0;
-  font-size: clamp(48px, 12vw, 88px);
+  width: min(100%, clamp(160px, 32vw, 260px));
 }
 
 .flag-result-details {
@@ -633,6 +649,22 @@ header {
 
 .flag-emoji {
   line-height: 1;
+}
+
+.flag-emoji-fallback {
+  display: inline-block;
+}
+
+.flag-display--fallback .flag-emoji-fallback {
+  font-size: clamp(56px, 14vw, 96px);
+}
+
+.flag-result-display.flag-display--fallback {
+  min-width: min(100%, clamp(160px, 32vw, 260px));
+}
+
+.flag-result-display.flag-display--fallback .flag-emoji-fallback {
+  font-size: clamp(48px, 12vw, 88px);
 }
 
 @media (max-width: 640px) {
@@ -788,14 +820,28 @@ header {
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
   border-radius: 14px;
   width: 100%;
-  aspect-ratio: 1;
-  font-size: clamp(40px, 8vw, 52px);
+  aspect-ratio: 4 / 3;
+  padding: clamp(6px, 1.6vw, 12px);
+  font-size: 0;
   cursor: pointer;
   color: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   transition: transform 0.08s ease, filter 0.2s ease;
+}
+
+.flag-hold-button .flag-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 10px;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16);
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.flag-hold-button--fallback .flag-emoji-fallback {
+  font-size: clamp(40px, 8vw, 52px);
 }
 
 .flag-hold-button:hover {
