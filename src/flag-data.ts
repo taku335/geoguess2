@@ -1,9 +1,51 @@
 export interface CountryFlag {
   name: string;
   flag: string;
+  isoCode: string;
+  imageUrl: string;
 }
 
-export const COUNTRY_FLAGS: CountryFlag[] = [
+interface RawCountryFlag {
+  name: string;
+  flag: string;
+  isoCode?: string;
+  imageUrl?: string;
+}
+
+const FLAG_IMAGE_BASE_URL = 'https://cdn.jsdelivr.net/gh/emcrisostomo/flags@master/4x3';
+
+function emojiToIsoCode(flagEmoji: string): string {
+  const codePoints = Array.from(flagEmoji);
+  if (codePoints.length !== 2) {
+    throw new Error(`Invalid flag emoji: "${flagEmoji}"`);
+  }
+  const base = 0x1f1e6;
+  const isoCode = codePoints
+    .map((char) => {
+      const codePoint = char.codePointAt(0);
+      if (!codePoint) {
+        throw new Error(`Invalid flag emoji code point: "${flagEmoji}"`);
+      }
+      return String.fromCharCode(65 + codePoint - base);
+    })
+    .join('');
+  return isoCode;
+}
+
+function createCountryFlag(entry: RawCountryFlag): CountryFlag {
+  const emoji = entry.flag;
+  const isoCode = (entry.isoCode || emojiToIsoCode(emoji)).toUpperCase();
+  const imageUrl =
+    entry.imageUrl || `${FLAG_IMAGE_BASE_URL}/${isoCode.toLowerCase()}.svg`;
+  return {
+    name: entry.name,
+    flag: emoji,
+    isoCode,
+    imageUrl
+  };
+}
+
+const RAW_COUNTRY_FLAGS: RawCountryFlag[] = [
   { name: 'アフガニスタン', flag: '🇦🇫' },
   { name: 'アルバニア', flag: '🇦🇱' },
   { name: 'アルジェリア', flag: '🇩🇿' },
@@ -200,7 +242,7 @@ export const COUNTRY_FLAGS: CountryFlag[] = [
   { name: 'ジンバブエ', flag: '🇿🇼' }
 ];
 
-export const EXTRA_COUNTRY_FLAGS: CountryFlag[] = [
+const RAW_EXTRA_COUNTRY_FLAGS: RawCountryFlag[] = [
   { name: '台湾', flag: '🇹🇼' },
   { name: 'コソボ', flag: '🇽🇰' },
   { name: 'パレスチナ', flag: '🇵🇸' },
@@ -209,6 +251,8 @@ export const EXTRA_COUNTRY_FLAGS: CountryFlag[] = [
   { name: 'ニウエ', flag: '🇳🇺' }
 ];
 
+export const COUNTRY_FLAGS: CountryFlag[] = RAW_COUNTRY_FLAGS.map(createCountryFlag);
+export const EXTRA_COUNTRY_FLAGS: CountryFlag[] = RAW_EXTRA_COUNTRY_FLAGS.map(createCountryFlag);
 export const ALL_COUNTRY_FLAGS: CountryFlag[] = [...COUNTRY_FLAGS, ...EXTRA_COUNTRY_FLAGS];
 
 const COUNTRY_FLAG_MAP = new Map<string, CountryFlag>(

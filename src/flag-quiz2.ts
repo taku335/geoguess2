@@ -2,6 +2,34 @@ import { ALL_COUNTRY_FLAGS, CountryFlag } from './flag-data.js';
 
 const FLAGS_PER_PAGE = 10;
 
+function setFlagButtonImage(button: HTMLButtonElement, flag: CountryFlag): void {
+  const image = document.createElement('img');
+  image.src = flag.imageUrl;
+  image.alt = `${flag.name}の国旗`;
+  image.className = 'flag-image';
+  image.decoding = 'async';
+  image.loading = 'lazy';
+  image.width = 640;
+  image.height = 480;
+
+  const fallback = () => {
+    button.classList.add('flag-hold-button--fallback');
+    button.innerHTML = '';
+    const emoji = document.createElement('span');
+    emoji.className = 'flag-emoji flag-emoji-fallback';
+    emoji.textContent = flag.flag;
+    button.appendChild(emoji);
+  };
+
+  image.addEventListener('error', fallback, { once: true });
+  image.addEventListener('load', () => {
+    button.classList.remove('flag-hold-button--fallback');
+  });
+
+  button.innerHTML = '';
+  button.appendChild(image);
+}
+
 function shuffleArray<T>(items: T[]): T[] {
   for (let i = items.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1));
@@ -89,8 +117,8 @@ function createFlagCard(flag: CountryFlag): HTMLElement {
   const button = document.createElement('button');
   button.type = 'button';
   button.className = 'flag-hold-button';
-  button.textContent = flag.flag;
-  button.setAttribute('aria-label', `${flag.flag} ${flag.name}`);
+  button.setAttribute('aria-label', `${flag.name}の国旗`);
+  setFlagButtonImage(button, flag);
 
   const name = document.createElement('div');
   name.className = 'flag-hold-name';

@@ -1,6 +1,35 @@
 /* eslint-disable no-alert */
 import { ALL_COUNTRY_FLAGS, COUNTRY_FLAGS, getFlagByName, pickFlags } from './flag-data.js';
 const OPTIONS_PER_FLAG_QUESTION = 4;
+function renderFlagImage(container, country, options = {}) {
+    const { eager = false } = options;
+    const image = document.createElement('img');
+    image.src = country.imageUrl;
+    image.alt = `${country.name}の国旗`;
+    image.className = 'flag-image';
+    image.decoding = 'async';
+    image.loading = eager ? 'eager' : 'lazy';
+    image.width = 640;
+    image.height = 480;
+    const fallback = () => {
+        container.classList.add('flag-display--fallback');
+        container.setAttribute('role', 'img');
+        container.setAttribute('aria-label', `${country.name}の国旗`);
+        container.innerHTML = '';
+        const emoji = document.createElement('span');
+        emoji.className = 'flag-emoji flag-emoji-fallback';
+        emoji.textContent = country.flag;
+        container.appendChild(emoji);
+    };
+    image.addEventListener('error', fallback, { once: true });
+    image.addEventListener('load', () => {
+        container.classList.remove('flag-display--fallback');
+        container.removeAttribute('role');
+        container.removeAttribute('aria-label');
+    });
+    container.innerHTML = '';
+    container.appendChild(image);
+}
 const ASIA_FLAGS = pickFlags([
     '日本',
     '中国',
@@ -542,16 +571,7 @@ function renderCurrentFlagQuestion() {
     questionBody.className = 'flag-question-body';
     const flagDisplay = document.createElement('div');
     flagDisplay.className = 'flag-display';
-    flagDisplay.setAttribute('role', 'img');
-    flagDisplay.setAttribute('aria-label', `${question.country.name}の国旗`);
-    const flagSpan = document.createElement('span');
-    flagSpan.className = 'flag-emoji';
-    flagSpan.textContent = question.country.flag;
-    flagDisplay.appendChild(flagSpan);
-    const srText = document.createElement('span');
-    srText.className = 'sr-only';
-    srText.textContent = `${question.country.name}の国旗`;
-    flagDisplay.appendChild(srText);
+    renderFlagImage(flagDisplay, question.country, { eager: true });
     const optionsContainer = document.createElement('div');
     optionsContainer.className = 'quiz-options';
     question.options.forEach((option, optionIndex) => {
@@ -621,16 +641,7 @@ function showFlagFinalResults() {
         card.className = 'flag-result-card';
         const flagDisplay = document.createElement('div');
         flagDisplay.className = 'flag-display flag-result-display';
-        flagDisplay.setAttribute('role', 'img');
-        flagDisplay.setAttribute('aria-label', `${question.country.name}の国旗`);
-        const flagSpan = document.createElement('span');
-        flagSpan.className = 'flag-emoji';
-        flagSpan.textContent = question.country.flag;
-        flagDisplay.appendChild(flagSpan);
-        const srText = document.createElement('span');
-        srText.className = 'sr-only';
-        srText.textContent = `${question.country.name}の国旗`;
-        flagDisplay.appendChild(srText);
+        renderFlagImage(flagDisplay, question.country);
         const details = document.createElement('div');
         details.className = 'flag-result-details';
         const summary = document.createElement('p');
