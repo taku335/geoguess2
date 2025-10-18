@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>国旗ビューワー — Mini GeoGuessr-like</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body class="flag-viewer-body">
+  <header>
+    <div class="brand-area">
+      <div class="brand">🌍 Mini GeoGuessr-like</div>
+      <nav class="nav-links" aria-label="サブページ">
+        <a class="nav-link" href="index.html">トップに戻る</a>
+        <a class="nav-link" href="quiz.html">GeoGuessr Wiki クイズ</a>
+        <a class="nav-link" href="flag-quiz.html">国旗クイズ</a>
+        <a class="nav-link" href="flag-quiz2.html">国旗クイズ2</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="flag-viewer-main">
+    <section class="flag-viewer-intro">
+      <h1>国旗ビューワー</h1>
+      <p>
+        国の名前をクリックすると、GitHub 上の <a href="https://github.com/emcrisostomo/flags" target="_blank" rel="noopener noreferrer">emcrisostomo/flags</a>
+        リポジトリにある SVG 国旗が開きます。リストは 50 音順で並んでいます。
+      </p>
+    </section>
+
+    <section aria-label="国旗リスト">
+      <ul id="flagViewerList" class="flag-viewer-list"></ul>
+    </section>
+  </main>
+
+  <script type="module" src="flag-viewer.js"></script>
+</body>
+</html>
