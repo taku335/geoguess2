@@ -3,14 +3,16 @@ import { ALL_COUNTRY_FLAGS, CountryFlag } from './flag-data.js';
 const FLAGS_PER_PAGE = 10;
 
 function setFlagButtonImage(button: HTMLButtonElement, flag: CountryFlag): void {
+  button.classList.remove('flag-hold-button--fallback');
+
   const image = document.createElement('img');
+  image.className = 'flag-image flag-hold-image';
   image.src = flag.imageUrl;
   image.alt = `${flag.name}の国旗`;
-  image.className = 'flag-image';
   image.decoding = 'async';
   image.loading = 'lazy';
-  image.width = 640;
-  image.height = 480;
+  image.width = 360;
+  image.height = 270;
 
   const fallback = () => {
     button.classList.add('flag-hold-button--fallback');
@@ -18,6 +20,7 @@ function setFlagButtonImage(button: HTMLButtonElement, flag: CountryFlag): void 
     const emoji = document.createElement('span');
     emoji.className = 'flag-emoji flag-emoji-fallback';
     emoji.textContent = flag.flag;
+    emoji.setAttribute('aria-hidden', 'true');
     button.appendChild(emoji);
   };
 
