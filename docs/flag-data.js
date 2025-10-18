@@ -1,4 +1,4 @@
-const FLAG_IMAGE_BASE_URL = 'https://cdn.jsdelivr.net/gh/emcrisostomo/flags@master/4x3';
+const FLAG_IMAGE_BASE_URL = 'https://flagcdn.com';
 function emojiToIsoCode(flagEmoji) {
     const codePoints = Array.from(flagEmoji);
     if (codePoints.length !== 2) {

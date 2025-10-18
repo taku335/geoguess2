@@ -16,10 +16,21 @@ function createFlagLink(country: CountryFlag): HTMLLIElement {
   link.rel = 'noopener noreferrer';
   link.setAttribute('data-iso', country.isoCode);
 
-  const emoji = document.createElement('span');
-  emoji.className = 'flag-viewer-emoji';
-  emoji.textContent = country.flag;
-  emoji.setAttribute('aria-hidden', 'true');
+  const image = document.createElement('img');
+  image.className = 'flag-viewer-image';
+  image.src = country.imageUrl;
+  image.alt = `${country.name}の国旗`;
+  image.loading = 'lazy';
+  image.decoding = 'async';
+  image.width = 60;
+  image.height = 45;
+  image.onerror = () => {
+    const fallback = document.createElement('span');
+    fallback.className = 'flag-viewer-emoji';
+    fallback.textContent = country.flag;
+    fallback.setAttribute('aria-hidden', 'true');
+    image.replaceWith(fallback);
+  };
 
   const name = document.createElement('span');
   name.className = 'flag-viewer-name';
@@ -29,7 +40,7 @@ function createFlagLink(country: CountryFlag): HTMLLIElement {
   code.className = 'flag-viewer-code';
   code.textContent = country.isoCode;
 
-  link.append(emoji, name, code);
+  link.append(image, name, code);
   item.appendChild(link);
   return item;
 }

@@ -12,7 +12,7 @@ interface RawCountryFlag {
   imageUrl?: string;
 }
 
-const FLAG_IMAGE_BASE_URL = 'https://cdn.jsdelivr.net/gh/emcrisostomo/flags@master/4x3';
+const FLAG_IMAGE_BASE_URL = 'https://flagcdn.com';
 
 function emojiToIsoCode(flagEmoji: string): string {
   const codePoints = Array.from(flagEmoji);

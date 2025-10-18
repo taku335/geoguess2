@@ -261,6 +261,16 @@ header {
   transform: translateY(1px);
 }
 
+.flag-viewer-image {
+  width: 60px;
+  height: 45px;
+  flex-shrink: 0;
+  border-radius: 8px;
+  object-fit: cover;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+}
+
 .flag-viewer-emoji {
   font-size: 26px;
   line-height: 1;
